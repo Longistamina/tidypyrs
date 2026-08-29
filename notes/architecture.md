@@ -1,6 +1,9 @@
 # TABLE OF CONTENTS
 - [1. reexports.py](#1-reexportspy)
 - [2. utils.py](#2-utilspy)
+- [3. tidyselect.py](#3-tidyselectpy)
+- [4. stringr.py](#4-stringrpy)
+- [5. lubridate.py](#5-lubridatepy)
 
 # 1. reexports.py
 Import essential Polars classes and functions that will become
@@ -71,3 +74,54 @@ Convert elements of input list x into ```[pl.col(x[i])]```
 
 ## 2.11. _kwargs_as_exprs(kwargs):
 Convert given key-value pairs into ```pl.lit(value).alias(key)```
+
+# 3. tidyselect.py
+This file maps tidyselect ideas to ```polars.selectors```   
+
+It contains definitions of these APIs:
++ ```contains()```: contains a literal string
++ ```starts_with()```: starts with a prefix
++ ```ends_with()```: ends with a suffix
++ ```everything()```: selects all columns
++ ```where()```: select columns by type using a string like ```tp.where("string")```
+
+# 4. stringr.py
+This file maps Tidyverse string functions to ```polars`` APIs   
+
+It contains these APIs:
++ ```str_length()```
++ ```str_to_lower()```
++ ```str_to_upper()```
++ ```str_paste()```
++ ```str_paste0()```
++ ```str_concat()```
++ ```str_detect()```
++ ```str_starts()```
++ ```str_ends()```
++ ```str_replace()```
++ ```str_replace_all()```
++ ```str_extract()```
++ ```str_sub()```
++ ```str_remove_all()```
++ ```str_remove()```
++ ```str_trim()```
+
+# 5. lubridate.py
+This file maps Tidyverse datetime functions to ```polars`` APIs   
+
+It contains these APIs:
++ ```as_date()```
++ ```as_datetime()```
++ ```hour()```
++ ```make_date()```
++ ```make_datetime()```
++ ```mday()```
++ ```minute()```
++ ```month()```
++ ```quarter()```
++ ```dt_round()```
++ ```second()```
++ ```wday()```
++ ```week()```
++ ```yday()```
++ ```year()```
