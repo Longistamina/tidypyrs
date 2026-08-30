@@ -19,8 +19,8 @@ from .tidyselect import everything
 from operator import not_
 
 __all__ = [
-    "as_frame",
-    "is_frame",
+    "as_tf",
+    "is_tf",
     "TibbleFrame",
     "desc",
     "from_pandas", "from_polars"
@@ -1115,7 +1115,7 @@ def desc(x):
 class DescCol(pl.Expr):
     pass
 
-def as_frame(x):
+def as_tf(x):
     """
     Convert an object to a TibbleFrame
 
@@ -1132,15 +1132,15 @@ def as_frame(x):
         out = from_polars(x)
     elif isinstance(x, dict):
         out = TibbleFrame(x)
-    elif is_frame(x):
+    elif is_tf(x):
         out = x
     else:
         out = pl.from_dataframe(x)
     return out
 
-def is_frame(x):
+def is_tf(x):
     """
-    Is an object to a tibble
+    Is an object to a TibbleFrame
 
     Parameters
     ----------
