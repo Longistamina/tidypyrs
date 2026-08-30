@@ -1132,7 +1132,7 @@ def as_frame(x):
         out = from_polars(x)
     elif isinstance(x, dict):
         out = TibbleFrame(x)
-    elif is_tibble(x):
+    elif is_frame(x):
         out = x
     else:
         out = pl.from_dataframe(x)
