@@ -4,6 +4,8 @@
 - [3. tidyselect.py](#3-tidyselectpy)
 - [4. stringr.py](#4-stringrpy)
 - [5. lubridate.py](#5-lubridatepy)
+- [6. groupby.py](#6-groupbypy)
+- [7. tibble_frame.py](#6-tibbleframepy)
 
 # 1. reexports.py
 Import essential Polars classes and functions that will become
@@ -29,11 +31,14 @@ _is_iterable(x): True if x has ```__iter__``` attribute but not a string
 _is_series(x): True if x is a ```pl.Series```
 _is_type(x): True if x is Polars literal value like ```pl.Int8```, which has ```type(x).__name__ == 'DataTypeClass'```
 
-## 2.3. _list_flatten(x)
+## 2.3. _uses_by(by)
+Check if user uses ```by``` parameter in any function that supports this parameter
+
+## 2.4. _list_flatten(x)
 Convert nested list into standard list.   
 For example: [[1, 2, 3], [4], [5, 6]] -> [1, 2, 3, 4, 5, 6]
 
-## 2.4. _as_list(x)
+## 2.5. _as_list(x)
 Convert given inputs into a list   
 For example:
   + [[1, 2, 3], [4], [5, 6]] -> [1, 2, 3, 4, 5, 6]
@@ -42,37 +47,37 @@ For example:
   + (3, 2, 5, 0) -> [3, 2, 5, 0]
   + None -> []
 
-## 2.5. _repeat(x, times)
+## 2.6. _repeat(x, times)
 Repeat the input list a given times.   
 If the input is not a list, then convert to list first.   
 
 For example: ```_repeat(x=(1, 2), times=3)``` will return ```[1, 2, 1, 2, 1, 2]```
 
-## 2.6. _str_to_lit(x):
+## 2.7. _str_to_lit(x):
 if x is a string,    
 then return ```pl.lit(x)```   
 else return x   
 
 For example: ```"active"``` -> ```pl.lit("active")```
 
-## 2.7. _lit_expr(x):
+## 2.8. _lit_expr(x):
 if x is a single Python scalar value,   
 then return ```pl.lit(x)```   
 else return x   
 
 For example: ```3``` -> ```pl.lit(3)```
 
-## 2.8. _mutate_cols(df, exprs):
+## 2.9. _mutate_cols(df, exprs):
 Mutate columns with given dataframe and expressions   
 by using ```df.with_columns()``` method.
 
-## 2.9. _col_expr(x):
+## 2.10. _col_expr(x):
 Convert input x into ```pl.col(x)```
 
-## 2.10. _col_exprs(x):
+## 2.11. _col_exprs(x):
 Convert elements of input list x into ```[pl.col(x[i])]```
 
-## 2.11. _kwargs_as_exprs(kwargs):
+## 2.12. _kwargs_as_exprs(kwargs):
 Convert given key-value pairs into ```pl.lit(value).alias(key)```
 
 # 3. tidyselect.py

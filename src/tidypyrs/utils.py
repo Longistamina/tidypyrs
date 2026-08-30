@@ -52,21 +52,21 @@ def _is_expr(x):
 def _is_type(x):  # Check single literal Polars value like pl.Int8 (``type(pl.Int8).__name__`` will return "DataTypeClass")
     return type(x).__name__ == 'DataTypeClass'
 
-# ===============================================================
-# Check if user uses ``_by`` parameter in ``summarise()``
-# ===============================================================
+# ==========================================================================================
+# Check if user uses ``by`` parameter in any function that supports this parameter
+# ==========================================================================================
 
-# def _uses_by(by):
-#     if _is_expr(by) | _is_string(by):
-#         return True
-#     elif isinstance(by, list):
-#         # Allow passing an empty list to `by`
-#         if _safe_len(by) == 0:
-#             return False
-#         else:
-#             return True
-#     else:
-#         return False
+def _uses_by(by):
+    if _is_expr(by) | _is_string(by):
+        return True
+    elif isinstance(by, list):
+        # Allow passing an empty list to `by`
+        if _safe_len(by) == 0:
+            return False
+        else:
+            return True
+    else:
+        return False
 
 # =======================================
 # List related utilities
