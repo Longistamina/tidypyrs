@@ -9,6 +9,8 @@ __all__ = [
     "str_to_upper",
     #####################
     "str_concat",
+    "str_paste",
+    "str_paste0",
     #####################
     "str_detect",
     "str_starts",
@@ -80,7 +82,7 @@ def str_to_upper(string):
 
 ##------------------------------------##
 
-def paste(*args, sep = ' '):
+def str_paste(*args, sep = ' '):
     """
     Concatenate strings together
 
@@ -100,7 +102,7 @@ def paste(*args, sep = ' '):
     string_format = sep.join(curlies) # "{}sep{}sep{}sep{}sep{}...{}"
     return pl.format(string_format, *args) # "{arg}sep{arg}sep{arg}...{arg}"
 
-def paste0(*args):
+def str_paste0(*args):
     """
     Concatenate strings together with no separator
 

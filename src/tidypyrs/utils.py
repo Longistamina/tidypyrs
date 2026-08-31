@@ -143,4 +143,4 @@ def _col_exprs(x):
 
 # Convert kwargs to col() expressions with alias
 def _kwargs_as_exprs(kwargs):
-    return [_lit_expr(expr).alias(key) for key, expr in kwargs.item()]
+    return [_lit_expr(expr).alias(key) for key, expr in kwargs.items()]

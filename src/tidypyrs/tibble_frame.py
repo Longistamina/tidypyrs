@@ -13,11 +13,10 @@ from .utils import (
     _over_exprs
 )
 from .stringr import str_concat
-from .groupby import TibbleGroupBy, TibbleDynamicGroupBy
+from .groupby import TibbleGroupBy
 import copy
 from .reexports import *
 from .tidyselect import everything
-from .tibble_lazy import from_polars_lazy
 from operator import not_, and_
 
 __all__ = [
@@ -25,7 +24,7 @@ __all__ = [
     "is_tf",
     "TibbleFrame",
     "desc",
-    "from_pandas", "from_polars_frame"
+    "from_polars_frame"
 ]
 
 class TibbleFrame(pl.DataFrame):
@@ -196,7 +195,7 @@ class TibbleFrame(pl.DataFrame):
 
     def colnames(self):
         "Return column names"
-        return self.columns
+        return self.as_polars().columns
 
     def clone(self):
         """Very cheap deep clone"""
@@ -354,7 +353,7 @@ class TibbleFrame(pl.DataFrame):
         label = "left",
         group_by = None,
         start_by = "window"
-    ) -> TibbleDynamicGroupBy:
+    ) -> TibbleGroupBy:
         """
         Group based on a time value (or index value of type Int32, Int64).
 
@@ -581,6 +580,8 @@ class TibbleFrame(pl.DataFrame):
         return super().join(tf, on, 'inner', left_on=left_on, right_on= right_on, suffix= suffix).pipe(from_polars_frame)
 
     def lazy(self):
+        "Convert TibbleFrame to TibbleLazy"
+        from .tibble_lazy import from_polars_lazy
         return super().lazy().pipe(from_polars_lazy)
 
     def left_join(self, tf, left_on=None, right_on=None, on=None, suffix='_right'):
@@ -1166,22 +1167,6 @@ def from_polars_frame(df):
     df = copy.copy(df)
     df.__class__ = TibbleFrame
     return df
-
-def from_pandas(df):
-    """
-    Convert from pandas DataFrame to TibbleFrame
-
-    Parameters
-    ----------
-    df : DataFrame
-        pd.DataFrame to convert to a TibbleFrame
-
-    Examples
-    --------
-    >>> tp.from_pandas(df)
-    """
-    return from_polars_frame(pl.from_pandas(df))
-
 
 _allowed_methods = [
     'dtypes', 'frame_equal',

@@ -30,6 +30,9 @@ __all__ = [
     "row_number",
     "sqrt",
 
+    # convert from pandas,
+    "from_pandas",
+
     # Agg stats
     "cor", "cov", "count", "first", "last", "length",
     "max", "mean", "median", "min", "n",
@@ -436,6 +439,26 @@ def first(x):
     """
     x = _col_expr(x)
     return x.first()
+
+def from_pandas(df, lazy=False):
+    """
+    Convert from pandas DataFrame to TibbleFrame or TibbleLazy
+
+    Parameters
+    ----------
+    df : DataFrame
+        pd.DataFrame to convert to a TibbleFrame
+
+    lazy: bool
+        convert to TibbleLazy or not
+
+    Examples
+    --------
+    >>> tp.tf_from_pandas(df, lazy=True)
+    """
+    if lazy:
+        return from_polars_lazy(pl.from_pandas(df).lazy())
+    return from_polars_frame(pl.from_pandas(df))
 
 def floor(x):
     """

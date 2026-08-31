@@ -7,10 +7,8 @@ from polars._utils.convert import parse_as_duration_string
 from datetime import timedelta
 import functools as ft
 
-from tidypyrs.tibble_frame import from_polars_frame
 from .utils import (
     _as_list,
-    _col_expr,
     _col_exprs,
     _is_expr,
     _is_string,
@@ -30,8 +28,7 @@ __all__ = [
     "as_tl",
     "is_tl",
     "TibbleLazy",
-    "desc",
-    "from_pandas", "from_polars_lazy"
+    "from_polars_lazy"
 ]
 
 class TibbleLazy(pl.LazyFrame):
@@ -175,6 +172,7 @@ class TibbleLazy(pl.LazyFrame):
 
     def collect(self, engine="auto"):
         "Collect the TibbleLazy with selected engine and return TibbleFrame"
+        from tidypyrs.tibble_frame import from_polars_frame
         return super().collect(engine=engine).pipe(from_polars_frame)
 
     def colnames(self):
@@ -206,6 +204,7 @@ class TibbleLazy(pl.LazyFrame):
         out = self.group_by(args).summarise(pl.len()).alias(name)
 
         if sort == True:
+            from .tibble_frame import desc
             out = out.arrange(desc(name))
 
         return out
@@ -986,7 +985,7 @@ class TibbleLazy(pl.LazyFrame):
         ...              max_b = tp.max(col('b')))
         """
         exprs = _as_list(args) + _kwargs_as_exprs(kwargs)
-        out = super(TibbleLazy, self).select(exprs)
+        out = super().select(exprs)
         return out.pipe(from_polars_lazy)
 
     def tail(self, n=5, *, over=None):
@@ -1037,16 +1036,6 @@ class TibbleLazy(pl.LazyFrame):
         return super().columns
 
 ##--------------------------------------------------------------------------------------##
-
-def desc(x):
-    """Mark a column to order in descending"""
-    x = copy.copy(x)
-    x = _col_expr(x)
-    x.__class__ = DescCol
-    return x
-
-class DescCol(pl.Expr):
-    pass
 
 def as_tl(x):
     """
@@ -1101,22 +1090,6 @@ def from_polars_lazy(lf):
     lf = copy.copy(lf)
     lf.__class__ = TibbleLazy
     return lf
-
-def from_pandas(df):
-    """
-    Convert from pandas DataFrame to TibbleLazy
-
-    Parameters
-    ----------
-    df : DataFrame
-        pd.DataFrame to convert to a TibbleLazy
-
-    Examples
-    --------
-    >>> tp.from_pandas(df)
-    """
-    return from_polars_lazy(pl.from_pandas(df).lazy())
-
 
 _allowed_methods = [
     'dtypes', 'frame_equal',
