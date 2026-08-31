@@ -10,7 +10,7 @@ __all__ = []
 # =======================================
 
 def _safe_len(x):
-    if x == None:
+    if not_(hasattr(x, "__len__")):
         return 0
     else:
         return len(x)
@@ -53,20 +53,19 @@ def _is_type(x):  # Check single literal Polars value like pl.Int8 (``type(pl.In
     return type(x).__name__ == 'DataTypeClass'
 
 # ==========================================================================================
-# Check if user uses ``by`` parameter in any function that supports this parameter
+# Check if user uses ``over`` parameter in any function that supports this parameter
+# And convert ``expr`` to ``expr.over(groups)``
 # ==========================================================================================
 
-def _uses_by(by):
-    if _is_expr(by) | _is_string(by):
-        return True
-    elif isinstance(by, list):
-        # Allow passing an empty list to `by`
-        if _safe_len(by) == 0:
-            return False
-        else:
-            return True
-    else:
-        return False
+def _uses_over(over):
+    return over is not None and len(_as_list(over)) > 0
+
+def _over_exprs(exprs, over):
+    if not _uses_over(over):
+        return exprs
+
+    groups = _as_list(over)
+    return [expr.over(groups) for expr in exprs]
 
 # =======================================
 # List related utilities
@@ -77,21 +76,18 @@ def _list_flatten(l):
     return list(chain.from_iterable(l)) # [[1, 2, 3], [4], [5, 6]] -> [1, 2, 3, 4, 5, 6]
 
 def _as_list(x):
-    if _is_type(x): # Convert single literal Polars value like ``pl.Int8`` into a single-element list ``[pl.Int8]``
-        out = [x]
-    elif _safe_len(x) == 0:
-        out = []
-    elif _is_series(x):
-        out = x.to_list() # use ``to_list()`` method of pl.Series to convert it into a Python list
-    elif _is_tuple(x):
-        # Helpful to convert args to a list
-        out = [val.to_list() if _is_series(val) else val for val in x]
-        out = _list_flatten(x)
-    elif _is_list(x):
-        out = _list_flatten(x)
-    else:
-        out = [x] # 3 -> [3]
-    return out
+    if x is None:
+        return []
+    if _is_type(x):
+        return [x]
+    if _is_series(x):
+        return x.to_list()
+    if isinstance(x, (list, tuple)):
+        return _list_flatten([
+            value.to_list() if _is_series(value) else value
+            for value in x
+        ])
+    return [x]
 
 def _repeat(x, times):
     if not_(_is_list(x)): # ensure x is a list

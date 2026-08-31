@@ -8,8 +8,6 @@ __all__ = [
     "str_to_lower",
     "str_to_upper",
     #####################
-    "str_paste",
-    "str_paste0",
     "str_concat",
     #####################
     "str_detect",
@@ -164,6 +162,8 @@ def str_detect(string, pattern, negate = False):
     exprs = ft.reduce(lambda a, b : a & b, exprs) # True if all are True, else False
     if negate:
         exprs = exprs.not_()
+
+    return exprs
 
 def str_starts(string, pattern, negate = False):
     """

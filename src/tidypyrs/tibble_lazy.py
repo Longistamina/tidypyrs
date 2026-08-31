@@ -16,14 +16,15 @@ from .utils import (
     _is_string,
     _kwargs_as_exprs,
     _mutate_cols,
-    _uses_by
+    _uses_over,
+    _over_exprs
 )
 from .stringr import str_concat
 from .groupby import TibbleLazyGroupBy
 import copy
 from .reexports import *
 from .tidyselect import everything
-from operator import not_
+from operator import not_, and_
 
 __all__ = [
     "as_tl",
@@ -33,7 +34,7 @@ __all__ = [
     "from_pandas", "from_polars_lazy"
 ]
 
-class TibbleLazy(pl.LazyFrame)
+class TibbleLazy(pl.LazyFrame):
     """
     A lazy data frame object that provides methods familiar to R tidyverse users.
     """
@@ -174,7 +175,7 @@ class TibbleLazy(pl.LazyFrame)
 
     def collect(self, engine="auto"):
         "Collect the TibbleLazy with selected engine and return TibbleFrame"
-        return self.collect(engine=engine).pipe(from_polars_frame)
+        return super().collect(engine=engine).pipe(from_polars_frame)
 
     def colnames(self):
         "Use `collect_schema()` to resolve for column names"
@@ -202,7 +203,7 @@ class TibbleLazy(pl.LazyFrame)
         """
         args = _as_list(args)
 
-        out = self.group_by(args).summarise(pl.len())
+        out = self.group_by(args).summarise(pl.len()).alias(name)
 
         if sort == True:
             out = out.arrange(desc(name))
@@ -285,7 +286,7 @@ class TibbleLazy(pl.LazyFrame)
         """
         return self.as_polars().glimpse()
 
-    def group_by(self, *by, maintain_order: bool = False, **named_by):
+    def group_by(self, *by, maintain_order: bool = False, **named_by) -> TibbleLazyGroupBy:
         """
         Start a group by operation.
 
@@ -312,20 +313,13 @@ class TibbleLazy(pl.LazyFrame)
         TibbleLazyGroupBy
             Object which can be used to perform aggregations with ``agg``, ``summarise`` or ``summarize``.
         """
-        for value in named_by.values():
-            if not isinstance(value, (str, pl.Expr, pl.Series)):
-                msg = (
-                    f"Expected Polars expression or object convertible to one, got {type(value)}.\n\n"
-                    "Hint: if you tried\n"
-                    f"    group_by(by={value!r})\n"
-                    "then you probably want to use this instead:\n"
-                    f"    group_by({value!r})"
-                )
-                raise TypeError(msg)
 
-        exprs = parse_into_list_of_expressions(*by, **named_by)
-        lgb = self._ldf.group_by(exprs, maintain_order)
-        return TibbleLazyGroupBy(lgb)
+        group_by = self.as_polars().group_by(
+            *by,
+            maintain_order=maintain_order,
+            **named_by,
+        )
+        return TibbleLazyGroupBy(group_by, from_polars_lazy)
 
     def group_by_dynamic(
         self,
@@ -434,7 +428,8 @@ class TibbleLazy(pl.LazyFrame)
         pyexprs_by = (
             parse_into_list_of_expressions(group_by) if group_by is not None else []
         )
-        lgb = self._ldf.group_by_dynamic(
+
+        group_by = self._ldf.group_by_dynamic(
             index_column_py,
             every,
             period,
@@ -445,9 +440,9 @@ class TibbleLazy(pl.LazyFrame)
             pyexprs_by,
             start_by,
         )
-        return TibbleLazyGroupBy(lgb)
+        return TibbleLazyGroupBy(group_by, from_polars_lazy)
 
-    def fill(self, *args, direction = 'down', by = None):
+    def fill(self, *args, direction='down', over=None):
         """
         Fill in missing values with previous or next value
 
@@ -457,8 +452,8 @@ class TibbleLazy(pl.LazyFrame)
             Columns to fill
         direction : str
             Direction to fill. One of ['down', 'up', 'downup', 'updown']
-        by : str, list
-            Columns to group by
+        over : str, list
+            Columns to group over
 
         Examples
         --------
@@ -466,8 +461,9 @@ class TibbleLazy(pl.LazyFrame)
         ...                 'b': [None, 2, None, None, 5],
         ...                 'groups': ['a', 'a', 'a', 'b', 'b']})
         >>> tl.fill('a', 'b')
-        >>> tl.fill('a', 'b', by = 'groups')
-        >>> tl.fill('a', 'b', direction = 'downup')
+        >>> tl.fill('a', 'b', over='groups')
+        >>> tl.fill('a', 'b', over='groups')
+        >>> tl.fill('a', 'b', direction='downup')
         """
         args = _as_list(args)
         if len(args) == 0: return self
@@ -475,44 +471,47 @@ class TibbleLazy(pl.LazyFrame)
         options = {'down': 'forward', 'up': 'backward'}
         if direction in ['down', 'up']:
             direction = options[direction]
-            exprs = [arg.fill_null(strategy = direction) for arg in args]
+            exprs = [arg.fill_null(strategy=direction) for arg in args]
         elif direction == 'downup':
             exprs = [
-                arg.fill_null(strategy = 'forward').fill_null(strategy = 'backward')
+                arg.fill_null(strategy='forward').fill_null(strategy='backward')
                 for arg in args
             ]
         elif direction == 'updown':
             exprs = [
-                arg.fill_null(strategy = 'backward')
-                .fill_null(strategy = 'forward')
+                arg.fill_null(strategy='backward')
+                .fill_null(strategy='forward')
                 for arg in args
             ]
         else:
             raise ValueError("direction must be one of down, up, downup, or updown")
 
-        return self.mutate(*exprs)
+        return self.mutate(*exprs, over=over)
 
-    def filter(self, *args):
+    def filter(self, *conditions, over=None):
         """
         Filter rows on one or more conditions
 
         Parameters
         ----------
-        *args : Expr
+        *conditions : Expr
             Conditions to filter by
+        over : str, list
+            Columns to group by
 
         Examples
         --------
         >>> tl = tp.TibbleLazy({'a': range(3), 'b': ['a', 'a', 'b']})
         >>> tl.filter(col('a') < 2, col('b') == 'a')
         >>> tl.filter((col('a') < 2) & (col('b') == 'a'))
-        >>> tl.filter(col('a') <= tp.mean(col('a')))
+        >>> tl.filter(col('a') <= tp.mean(col('a')), over='b')
         """
-        args = _as_list(args)
-        exprs = ft.reduce(lambda a, b: a & b, args)
+        predicate = ft.reduce(and_, conditions)
 
-        out = super().filter(exprs)
+        if _uses_over(over):
+            predicate = predicate.over(_as_list(over))
 
+        out = super().filter(predicate)
         return out.pipe(from_polars_lazy)
 
     def full_join(self, lf, left_on = None, right_on = None, on = None, suffix: str = '_right'):
@@ -543,9 +542,9 @@ class TibbleLazy(pl.LazyFrame)
         out = super().join(lf, on, "full", left_on = left_on, right_on = right_on, suffix = suffix, coalesce = True)
         return out.pipe(from_polars_lazy)
 
-    def head(self, n = 5, *, by = None):
+    def head(self, n=5, *, over=None):
         """Alias for `.slice_head()`"""
-        return self.slice_head(n, by = by)
+        return self.slice_head(n, over=over).pipe(from_polars_frame)
 
     def inner_join(self, lf, left_on = None, right_on = None, on = None, suffix = '_right'):
         """
@@ -601,7 +600,7 @@ class TibbleLazy(pl.LazyFrame)
             on = list(set(self.names) & set(lf.names))
         return super().join(lf, on, 'left',  left_on = left_on, right_on= right_on, suffix= suffix).pipe(from_polars_lazy)
 
-    def mutate(self, *args, **kwargs):
+    def mutate(self, *args, over=None, **kwargs):
         """
         Add or modify columns
 
@@ -609,20 +608,22 @@ class TibbleLazy(pl.LazyFrame)
         ----------
         *args : Expr
             Column expressions to add or modify
-
+        by : str, list
+            Columns to group by
         **kwargs : Expr
             Column expressions to add or modify
 
         Examples
         --------
-        >>> tl = tp.TibbleLazy({'a': range(3), 'b': range(3), c = ['a', 'a', 'b']})
+        >>> tl = tp.TibbleLazy({'a': range(3), 'b': range(3), c=['a', 'a', 'b']})
         >>> tl.mutate(double_a = col('a') * 2,
         ...           a_plus_b = col('a') + col('b'))
-        >>> tl.mutate(row_num = row_number())
+        >>> tl.mutate(row_num = row_number(), over='c')
         """
         exprs = _as_list(args) + _kwargs_as_exprs(kwargs)
-        out = self.as_polars()
-        out = _mutate_cols(out, exprs)
+        exprs = _over_exprs(exprs, over)
+
+        out = _mutate_cols(self.as_polars(), exprs)
         return out.pipe(from_polars_lazy)
 
     def pivot_longer(self,
@@ -885,7 +886,7 @@ class TibbleLazy(pl.LazyFrame)
         args = _col_exprs(args)
         return super().select(args).pipe(from_polars_lazy)
 
-    def slice(self, *args):
+    def slice(self, *args, over=None):
         """
         Grab rows from a data frame
 
@@ -893,17 +894,24 @@ class TibbleLazy(pl.LazyFrame)
         ----------
         *args : int, list
             Rows to grab
+        by : str, list
+            Columns to group by
 
         Examples
         --------
         >>> tl = tp.TibbleLazy({'a': range(3), 'b': range(3), 'c': ['a', 'a', 'b']})
         >>> tl.slice(0, 1)
+        >>> tl.slice(0, over='c')
         """
         rows = _as_list(args)
-        lf = super(TibbleLazy, self).select(pl.all().gather(rows))
-        return lf.pipe(from_polars_lazy)
 
-    def slice_head(self, n=5):
+        if _uses_over(over):
+            tl = super().select(pl.all().gather(rows).over(over))
+        else:
+            tl = super().select(pl.all().gather(rows))
+        return tl.pipe(from_polars_lazy)
+
+    def slice_head(self, n=5, *, over=None):
         """
         Grab top rows from a data frame
 
@@ -911,19 +919,24 @@ class TibbleLazy(pl.LazyFrame)
         ----------
         n : int
             Number of rows to grab
+        over : str, list
+            Columns to group by
 
         Examples
         --------
         >>> tl = tp.TibbleLazy({'a': range(3), 'b': range(3), 'c': ['a', 'a', 'b']})
         >>> tl.slice_head(2)
+        >>> tl.slice_head(1, over='c')
         """
         col_order = self.names
+        if _uses_over(over):
+            tl = super().group_by(over).head(n)
+        else:
+            tl = super().head(n)
+        tl = tl.select(col_order)
+        return tl.pipe(from_polars_lazy)
 
-        lf = super(TibbleLazy, self).head(n)
-        lf = lf.select(col_order)
-        return lf.pipe(from_polars_lazy)
-
-    def slice_tail(self, n=5):
+    def slice_tail(self, n=5, *, over=None):
         """
         Grab bottom rows from a data frame
 
@@ -931,17 +944,22 @@ class TibbleLazy(pl.LazyFrame)
         ----------
         n : int
             Number of rows to grab
+        by : str, list
+            Columns to group by
 
         Examples
         --------
         >>> tl = tp.TibbleLazy({'a': range(3), 'b': range(3), 'c': ['a', 'a', 'b']})
         >>> tl.slice_tail(2)
-        >>> tl.slice_tail(1, by = 'c')
+        >>> tl.slice_tail(1, over='c')
         """
         col_order = self.names
-        lf = super(TibbleLazy, self).tail(n)
-        lf = lf.select(col_order)
-        return lf.pipe(from_polars_lazy)
+        if _uses_over(over):
+            tl = super().group_by(over).tail(n)
+        else:
+            tl = super().tail(n)
+        tl = tl.select(col_order)
+        return tl.pipe(from_polars_lazy)
 
     def summarise(self, *args, **kwargs):
         """Alias for `.summarize()`"""
@@ -971,9 +989,9 @@ class TibbleLazy(pl.LazyFrame)
         out = super(TibbleLazy, self).select(exprs)
         return out.pipe(from_polars_lazy)
 
-    def tail(self, n=5):
+    def tail(self, n=5, *, over=None):
         """Alias for `.slice_tail()`"""
-        return self.slice_tail(n)
+        return self.slice_tail(n, over=over).pipe(from_polars_frame)
 
     def unite(self, col = "_united", unite_cols = [], sep = "_", remove = True):
         """
@@ -1032,7 +1050,7 @@ class DescCol(pl.Expr):
 
 def as_tl(x):
     """
-    Convert an object to a TibbleFrame
+    Convert an object to a TibbleLazy
 
     Parameters
     ----------
@@ -1043,19 +1061,19 @@ def as_tl(x):
     --------
     >>> tp.as_tibble(polars_lf)
     """
-    if isinstance(x, pl.DataFrame):
+    if isinstance(x, pl.LazyFrame):
         out = from_polars_lazy(x)
     elif isinstance(x, dict):
         out = TibbleLazy(x)
-    elif is_tf(x):
+    elif is_tl(x):
         out = x
     else:
-        out = pl.from_dataframe(x)
+        out = from_polars_lazy(pl.from_dataframe(x).lazy())
     return out
 
-def is_tf(x):
+def is_tl(x):
     """
-    Is an object to a TibbleFrame
+    Is an object to a TibbleLazy
 
     Parameters
     ----------
@@ -1069,12 +1087,12 @@ def is_tf(x):
 
 def from_polars_lazy(lf):
     """
-    Convert from polars LazyFrame to tibble lazy
+    Convert from polars LazyFrame to TibbleLazy
 
     Parameters
     ----------
     lf : LazyFrame
-        pl.LazyFrame to convert to a tibble
+        pl.LazyFrame to convert to a TibbleLazy
 
     Examples
     --------
@@ -1086,12 +1104,12 @@ def from_polars_lazy(lf):
 
 def from_pandas(df):
     """
-    Convert from pandas DataFrame to tibble
+    Convert from pandas DataFrame to TibbleLazy
 
     Parameters
     ----------
     df : DataFrame
-        pd.DataFrame to convert to a tibble
+        pd.DataFrame to convert to a TibbleLazy
 
     Examples
     --------

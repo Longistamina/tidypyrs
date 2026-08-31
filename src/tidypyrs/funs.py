@@ -105,7 +105,7 @@ def as_categorical(x):
     x = _col_expr(x)
     return x.cast(pl.String).cast(pl.Categorical)
 
-def as_enum(x, categories=None):
+def as_enum(x, categories=None, reverse=False):
     """
     Convert a column to a Polars Enum.
 
@@ -114,13 +114,19 @@ def as_enum(x, categories=None):
     - `categories`: fixed Enum categories, or
     - `x=df.select(x)`: a TibbleFrame/TibbleLazy from which categories are inferred.
 
+    Note: for TibbleLazy, should provide `x` as string and `categories`,
+          otherwise the internal evaluation could be expensive
+
     Parameters
     ----------
     x : TibbleFrame, TibbleLazy
         The output of selecting single column ``df.select("x")`` or ``lf.select("x")``
 
-    categories : iterable of str, Series, Python Enum, optional
+    categories : iterable of str, Series, optional
         Enum categories in their desired order.
+
+    reverse : bool
+        Reverse the order of the categories or not
 
     Returns
     -------
@@ -144,6 +150,9 @@ def as_enum(x, categories=None):
 
     elif not isinstance(x, str):
         raise TypeError("`categories` is provided, then `x` should be a string, not either TibbleFrame or TibbleLazy")
+
+    if reverse:
+        categories = categories.reverse() if isinstance(categories, pl.Series) else _as_list(categories)[::-1]
 
     return (
         _col_expr(x)
@@ -198,7 +207,7 @@ def as_integer(x):
     x = _col_expr(x)
     return x.cast(pl.Int64)
 
-def as_ordered(x, categories=None, *, frame=None):
+def as_ordered(x, categories=None, reverse=False):
     """
     Alias for `as_enum()`
 
@@ -207,25 +216,28 @@ def as_ordered(x, categories=None, *, frame=None):
     Supply either:
 
     - `categories`: fixed Enum categories, or
-    - `frame`: a TibbleFrame/TibbleLazy from which categories are inferred.
+    - `x=df.select(x)`: a TibbleFrame/TibbleLazy from which categories are inferred.
+
+    Note: for TibbleLazy, should provide `x` as string and `categories`,
+          otherwise the internal evaluation could be expensive
 
     Parameters
     ----------
-    x : Expr, str
-        Column to convert.
+    x : TibbleFrame, TibbleLazy
+        The output of selecting single column ``df.select("x")`` or ``lf.select("x")``
 
-    categories : iterable of str, Series, Python Enum, optional
+    categories : iterable of str, Series, optional
         Enum categories in their desired order.
 
-    frame : DataFrame, LazyFrame, TibbleFrame, optional
-        Frame used to infer categories when `categories` is not supplied.
+    reverse : bool
+        Reverse the order of the categories or not
 
     Returns
     -------
     Expr
         Expression casting `x` to Enum.
     """
-    return as_enum(x, categories, frame=frame)
+    return as_enum(x, categories, reverse)
 
 def as_string(x):
     """
