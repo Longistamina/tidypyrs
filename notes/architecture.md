@@ -5,7 +5,9 @@
 - [4. stringr.py](#4-stringrpy)
 - [5. lubridate.py](#5-lubridatepy)
 - [6. groupby.py](#6-groupbypy)
-- [7. tibble_frame.py](#6-tibbleframepy)
+- [7. tibble_frame.py](#7-tibbleframepy)
+- [8. tibble_lazy.py](#8-tibblelazypy)
+- [9. funs.py](#9-funspy)
 
 # 1. reexports.py
 Import essential Polars classes and functions that will become
@@ -31,8 +33,9 @@ _is_iterable(x): True if x has ```__iter__``` attribute but not a string
 _is_series(x): True if x is a ```pl.Series```
 _is_type(x): True if x is Polars literal value like ```pl.Int8```, which has ```type(x).__name__ == 'DataTypeClass'```
 
-## 2.3. _uses_by(by)
-Check if user uses ```by``` parameter in any function that supports this parameter
+## 2.3. _uses_over(over) and _over_exprs(exprs, over)
+Check if user uses ```over``` parameter in any function that supports this parameter,
+and convert given ```expr``` into grouped ```expr.over(over)```
 
 ## 2.4. _list_flatten(x)
 Convert nested list into standard list.   
@@ -130,3 +133,27 @@ It contains these APIs:
 + ```week()```
 + ```yday()```
 + ```year()```
+
+# 6. groupby.py
+This file contains the definitions of ```TibbleGroupBy``` and ```TibbleLazyGroupBy```,   
+mapping ```tidypyrs``` APIs to ```polars``` APIs.
+
+# 7. tibble_frame.py
+This file contains the definition of ```TibbleFrame``` and its tidyverse-style methods,   
+mapping ```polars.DataFrame``` to ```TibbleFrame```
+
+# 8. tibble_lazy.py
+This file contains the definition of ```TibbleLazy``` and its tidyverse-style methods,   
+mapping ```polars.LazyFrame``` to ```TibbleLazy```
+
+# 9. funs.py
+This file contains the definition of standalone functions   
+that should be called directly from ```tidypyrs```   
+
+For example:
+```
+import tidypyrs as tp
+
+tp.as_enum()
+tp.as_categorical()
+```
