@@ -6,6 +6,8 @@ from typing import Any
 
 from polars._utils.convert import parse_as_duration_string
 from polars.dataframe.group_by import GroupBy, DynamicGroupBy
+from polars.lazyframe.group_by import LazyGroupBy
+from polars._plr import PyLazyGroupBy
 
 from polars._typing import (
     ClosedInterval,
@@ -14,8 +16,12 @@ from polars._typing import (
     StartBy,
 )
 
-from .tibble_frame import TibbleFrame, from_polars
+from .tibble_frame import TibbleFrame, from_polars_frame
+from .tibble_lazy import TibbleLazy, from_polars_lazy
 
+# ======================================================
+# GroupBy classes for TibbleFrame
+# ======================================================
 
 class TibbleGroupBy(GroupBy):
     def __init__(
@@ -42,7 +48,7 @@ class TibbleGroupBy(GroupBy):
     ) -> TibbleFrame:
         result = super().agg(*exprs, **named_exprs)
 
-        return from_polars(result)
+        return from_polars_frame(result)
 
     summarise = summarize
 
@@ -85,6 +91,25 @@ class TibbleDynamicGroupBy(DynamicGroupBy):
     ) -> TibbleFrame:
         result = super().agg(*exprs, **named_exprs)
 
-        return from_polars(result)
+        return from_polars_frame(result)
+
+    summarise = summarize
+
+# ======================================================
+# GroupBy class for TibbleLazy
+# ======================================================
+
+class TibbleLazyGroupBy(LazyGroupBy):
+    def __init__(self, lgb: PyLazyGroupBy):
+        self.lgb = lgb
+
+    def summarize(
+        self,
+        *exprs: IntoExpr | Iterable[IntoExpr],
+        **named_exprs: IntoExpr,
+    ) -> TibbleLazy:
+        result = super().agg(*exprs, **named_exprs)
+
+        return from_polars_lazy(result)
 
     summarise = summarize

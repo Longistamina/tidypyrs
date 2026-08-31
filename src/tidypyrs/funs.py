@@ -131,25 +131,22 @@ def as_enum(x, categories=None):
     if categories is None:
         if isinstance(x, TibbleFrame):
             categories = x.to_series().cast(pl.String).drop_nulls().unique().sort()
-            x_str = categories.name
+            x = categories.name
 
         elif isinstance(x, TibbleLazy):
             categories = x.collect().to_series().cast(pl.String).drop_nulls().unique().sort()
-            x_str = categories.name
+            x = categories.name
 
         else:
             raise ValueError(
                 "`categories` or output from `df.select('x')` must be provided"
             )
 
-    elif isinstance(x, str):
-        x_str = x
-
-    else:
+    elif not isinstance(x, str):
         raise TypeError("`categories` is provided, then `x` should be a string, not either TibbleFrame or TibbleLazy")
 
     return (
-        _col_expr(x_str)
+        _col_expr(x)
         .cast(pl.String)
         .cast(pl.Enum(categories))
     )
