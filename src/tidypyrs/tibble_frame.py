@@ -23,7 +23,7 @@ __all__ = [
     "is_tf",
     "TibbleFrame",
     "desc",
-    "from_pandas", "from_polars"
+    "from_pandas", "from_polars_frame"
 ]
 
 class TibbleFrame(pl.DataFrame)
@@ -111,7 +111,7 @@ class TibbleFrame(pl.DataFrame)
         """
         exprs = _as_list(args)
         desc = [True if isinstance(expr, DescCol) else False for expr in exprs]
-        return super().sort(exprs, descending = desc).pipe(from_polars)
+        return super().sort(exprs, descending = desc).pipe(from_polars_frame)
 
     def as_dict(self, *, as_series = True):
         """
@@ -171,7 +171,7 @@ class TibbleFrame(pl.DataFrame)
         out = self.as_polars()
         for frame in frames:
             out = out.hstack(frame)
-        return out.pipe(from_polars)
+        return out.pipe(from_polars_frame)
 
     def bind_rows(self, *args):
         """
@@ -190,11 +190,11 @@ class TibbleFrame(pl.DataFrame)
         """
         frames = _as_list(args)
         out = pl.concat([self, *frames], how = "diagonal")
-        return out.pipe(from_polars)
+        return out.pipe(from_polars_frame)
 
     def clone(self):
         """Very cheap deep clone"""
-        return super().clone().pipe(from_polars)
+        return super().clone().pipe(from_polars_frame)
 
     def count(self, *args, sort = False, name = 'n'):
         """
@@ -245,7 +245,7 @@ class TibbleFrame(pl.DataFrame)
             df = super().unique()
         else:
             df = super().select(args).unique()
-        return df.pipe(from_polars)
+        return df.pipe(from_polars_frame)
 
     def drop(self, *args):
         """
@@ -262,7 +262,7 @@ class TibbleFrame(pl.DataFrame)
         """
         args = _as_list(args)
         drop_cols = self.select(args).names
-        return super().drop(drop_cols).pipe(from_polars)
+        return super().drop(drop_cols).pipe(from_polars_frame)
 
     def drop_null(self, *args):
         """
@@ -284,7 +284,7 @@ class TibbleFrame(pl.DataFrame)
             out = super().drop_nulls()
         else:
             out = super().drop_nulls(args)
-        return out.pipe(from_polars)
+        return out.pipe(from_polars_frame)
 
     def equals(self, other, null_equal = True):
         """Check if two tibbles are equal"""
@@ -514,7 +514,7 @@ class TibbleFrame(pl.DataFrame)
         else:
             out = super().filter(exprs)
 
-        return out.pipe(from_polars)
+        return out.pipe(from_polars_frame)
 
     def full_join(self, df, left_on = None, right_on = None, on = None, suffix: str = '_right'):
         """
@@ -542,7 +542,7 @@ class TibbleFrame(pl.DataFrame)
         if (left_on == None) & (right_on == None) & (on == None):
             on = list(set(self.names) & set(df.names))
         out = super().join(df, on, "full", left_on = left_on, right_on = right_on, suffix = suffix, coalesce = True)
-        return out.pipe(from_polars)
+        return out.pipe(from_polars_frame)
 
     def head(self, n = 5, *, by = None):
         """Alias for `.slice_head()`"""
@@ -573,7 +573,7 @@ class TibbleFrame(pl.DataFrame)
         """
         if (left_on == None) & (right_on == None) & (on == None):
             on = list(set(self.names) & set(df.names))
-        return super().join(df, on, 'inner', left_on = left_on, right_on= right_on, suffix= suffix).pipe(from_polars)
+        return super().join(df, on, 'inner', left_on = left_on, right_on= right_on, suffix= suffix).pipe(from_polars_frame)
 
     def left_join(self, df, left_on = None, right_on = None, on = None, suffix = '_right'):
         """
@@ -600,7 +600,7 @@ class TibbleFrame(pl.DataFrame)
         """
         if (left_on == None) & (right_on == None) & (on == None):
             on = list(set(self.names) & set(df.names))
-        return super().join(df, on, 'left',  left_on = left_on, right_on= right_on, suffix= suffix).pipe(from_polars)
+        return super().join(df, on, 'left',  left_on = left_on, right_on= right_on, suffix= suffix).pipe(from_polars_frame)
 
     def mutate(self, *args,
                by = None,
@@ -633,7 +633,7 @@ class TibbleFrame(pl.DataFrame)
         else:
             out = _mutate_cols(out, exprs)
 
-        return out.pipe(from_polars)
+        return out.pipe(from_polars_frame)
 
     def pivot_longer(self,
                      cols = everything(),
@@ -661,7 +661,7 @@ class TibbleFrame(pl.DataFrame)
         value_vars = self.select(cols).names
         id_vars = df_cols.filter(df_cols.is_in(value_vars).not_()).to_list()
         out = super().unpivot(index = id_vars, on = value_vars, variable_name = names_to, value_name = values_to)
-        return out.pipe(from_polars)
+        return out.pipe(from_polars_frame)
 
     def pivot_wider(self,
                     names_from = 'name',
@@ -708,7 +708,7 @@ class TibbleFrame(pl.DataFrame)
         out = (
             super()
             .pivot(values = values_from, index = id_cols, on = names_from, aggregate_function = values_fn)
-            .pipe(from_polars)
+            .pipe(from_polars_frame)
         )
 
         if values_fill != None:
@@ -810,7 +810,7 @@ class TibbleFrame(pl.DataFrame)
         """
         if mapping == None:
             mapping = {value:key for key, value in kwargs.items()}
-        return super().rename(mapping).pipe(from_polars)
+        return super().rename(mapping).pipe(from_polars_frame)
 
     def replace_null(self, replace = None):
         """
@@ -862,7 +862,7 @@ class TibbleFrame(pl.DataFrame)
                     .struct
                     .rename_fields(into))
             .unnest("_seps")
-            .pipe(from_polars)
+            .pipe(from_polars_frame)
         )
         out = self.bind_cols(sep_df)
         if remove == True:
@@ -905,7 +905,7 @@ class TibbleFrame(pl.DataFrame)
         """
         args = _as_list(args)
         args = _col_exprs(args)
-        return super().select(args).pipe(from_polars)
+        return super().select(args).pipe(from_polars_frame)
 
     def slice(self, *args, by = None):
         """
@@ -929,7 +929,7 @@ class TibbleFrame(pl.DataFrame)
             df = super(TibbleFrame, self).group_by(by).map_groups(lambda x: x.select(pl.all().gather(rows)))
         else:
             df = super(TibbleFrame, self).select(pl.all().gather(rows))
-        return df.pipe(from_polars)
+        return df.pipe(from_polars_frame)
 
     def slice_head(self, n = 5, *, by = None):
         """
@@ -954,7 +954,7 @@ class TibbleFrame(pl.DataFrame)
         else:
             df = super(TibbleFrame, self).head(n)
         df = df.select(col_order)
-        return df.pipe(from_polars)
+        return df.pipe(from_polars_frame)
 
     def slice_tail(self, n = 5, *, by = None):
         """
@@ -979,7 +979,7 @@ class TibbleFrame(pl.DataFrame)
         else:
             df = super(TibbleFrame, self).tail(n)
         df = df.select(col_order)
-        return df.pipe(from_polars)
+        return df.pipe(from_polars_frame)
 
     def summarise(self, *args, **kwargs):
         """Alias for `.summarize()`"""
@@ -1007,7 +1007,7 @@ class TibbleFrame(pl.DataFrame)
         """
         exprs = _as_list(args) + _kwargs_as_exprs(kwargs)
         out = super(TibbleFrame, self).select(exprs)
-        return out.pipe(from_polars)
+        return out.pipe(from_polars_frame)
 
     def tail(self, n = 5, *, by = None):
         """Alias for `.slice_tail()`"""
@@ -1129,7 +1129,7 @@ def as_tf(x):
     >>> tp.as_tibble(polars_df)
     """
     if isinstance(x, pl.DataFrame):
-        out = from_polars(x)
+        out = from_polars_frame(x)
     elif isinstance(x, dict):
         out = TibbleFrame(x)
     elif is_tf(x):
@@ -1152,7 +1152,7 @@ def is_tf(x):
     """
     return isinstance(x, TibbleFrame)
 
-def from_polars(df):
+def from_polars_frame(df):
     """
     Convert from polars DataFrame to tibble frame
 
@@ -1163,7 +1163,7 @@ def from_polars(df):
 
     Examples
     --------
-    >>> tp.from_polars(df)
+    >>> tp.from_polars_frame(df)
     """
     df = copy.copy(df)
     df.__class__ = TibbleFrame
@@ -1182,4 +1182,4 @@ def from_pandas(df):
     --------
     >>> tp.from_pandas(df)
     """
-    return from_polars(pl.from_pandas(df))
+    return from_polars_frame(pl.from_pandas(df))
