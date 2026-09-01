@@ -5,7 +5,7 @@ uv run pytest tests/frame/test_over.py
 import tidypyrs as tp
 from tidypyrs import col as c
 
-def test_filter_over_over():
+def test_filter_over():
     """Can filter by group"""
     tf = tp.TibbleFrame({'x': range(3), 'y': ['a', 'a', 'b']})
     actual = (

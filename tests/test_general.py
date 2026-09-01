@@ -2,12 +2,12 @@ import polars as pl
 import tidypyrs as tp
 
 def test_eager_public_api():
-    df = tp.TibbleFrame(
+    tf = tp.TibbleFrame(
         group=["a", "a", "b"],
         value=[1, 2, 3],
     )
 
-    result = df.mutate(
+    result = tf.mutate(
         group_mean=tp.mean("value"),
         over="group",
     )
@@ -17,15 +17,17 @@ def test_eager_public_api():
 
 
 def test_lazy_public_api():
-    lf = tp.TibbleLazy(
+    tl = tp.TibbleLazy(
         group=["a", "a", "b"],
         value=[1, 2, 3],
     )
 
-    result = lf.mutate(
+    result = tl.mutate(
         group_mean=tp.mean("value"),
         over="group",
     )
+
+    print(result.collect())
 
     assert isinstance(result.colnames, pl.Series)
     assert len(result.colnames) > 0
@@ -33,15 +35,16 @@ def test_lazy_public_api():
     assert isinstance(result.as_polars(), pl.LazyFrame)
     assert isinstance(result.collect(), tp.TibbleFrame)
 
+test_lazy_public_api()
 
 def test_grouped_summary_return_types():
-    df = tp.TibbleFrame(group=["a", "a", "b"], value=[1, 2, 3])
-    lf = df.lazy()
+    tf = tp.TibbleFrame(group=["a", "a", "b"], value=[1, 2, 3])
+    tl = tf.lazy()
 
-    eager = df.group_by("group").summarize(
+    eager = tf.group_by("group").summarize(
         mean_value=tp.mean("value")
     )
-    lazy = lf.group_by("group").summarize(
+    lazy = tl.group_by("group").summarize(
         mean_value=tp.mean("value")
     )
 
