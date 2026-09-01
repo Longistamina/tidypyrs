@@ -13,7 +13,7 @@ def test_eager_public_api():
     )
 
     assert isinstance(result, tp.TibbleFrame)
-    assert result.colnames() == ["group", "value", "group_mean"]
+    assert result.colnames.to_list() == ["group", "value", "group_mean"]
 
 
 def test_lazy_public_api():
@@ -27,8 +27,8 @@ def test_lazy_public_api():
         over="group",
     )
 
-    assert isinstance(result.colnames(), list)
-    assert len(result.colnames()) > 0
+    assert isinstance(result.colnames, pl.Series)
+    assert len(result.colnames) > 0
     assert isinstance(result, tp.TibbleLazy)
     assert isinstance(result.as_polars(), pl.LazyFrame)
     assert isinstance(result.collect(), tp.TibbleFrame)

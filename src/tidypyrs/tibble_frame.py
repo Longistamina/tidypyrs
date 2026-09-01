@@ -22,7 +22,6 @@ __all__ = [
     "as_tf",
     "is_tf",
     "TibbleFrame",
-    "desc",
 ]
 
 class TibbleFrame(pl.DataFrame):
@@ -577,8 +576,8 @@ class TibbleFrame(pl.DataFrame):
 
     def lazy(self):
         "Convert TibbleFrame to TibbleLazy"
-        from .tibble_lazy import from_polars_lazy
-        return super().lazy().pipe(from_polars_lazy)
+        from .tibble_lazy import _from_polars_lazy
+        return super().lazy().pipe(_from_polars_lazy)
 
     def left_join(self, tf, left_on=None, right_on=None, on=None, suffix='_right'):
         """
