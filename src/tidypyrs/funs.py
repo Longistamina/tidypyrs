@@ -1,6 +1,7 @@
+import copy
 import polars as pl
-from .tibble_frame import from_polars_frame, TibbleFrame
-from .tibble_lazy import from_polars_lazy, TibbleLazy
+from .tibble_frame import TibbleFrame
+from .tibble_lazy import TibbleLazy
 from .utils import (
     _as_list,
     _col_expr,
@@ -9,7 +10,6 @@ from .utils import (
     _is_list,
     _is_iterable,
     _is_series,
-    _is_string,
     _str_to_lit
 )
 
@@ -19,6 +19,7 @@ __all__ = [
     "across",
     "case_when",
     "coalesce",
+    "desc",
     "floor",
     "if_else",
     "lag", "lead",
@@ -30,8 +31,9 @@ __all__ = [
     "row_number",
     "sqrt",
 
-    # convert from pandas,
+    # convert from pandas and polars,
     "from_pandas",
+    "from_polars",
 
     # Agg stats
     "cor", "cov", "count", "first", "last", "length",
@@ -423,6 +425,16 @@ def count(x):
     x = _col_expr(x)
     return x.count()
 
+def desc(x):
+    """Mark a column to order in descending"""
+    x = copy.copy(x)
+    x = _col_expr(x)
+    x.__class__ = DescCol
+    return x
+
+class DescCol(pl.Expr):
+    pass
+
 def first(x):
     """
     Get first value
@@ -457,8 +469,8 @@ def from_pandas(df, lazy=False):
     >>> tp.tf_from_pandas(df, lazy=True)
     """
     if lazy:
-        return from_polars_lazy(pl.from_pandas(df).lazy())
-    return from_polars_frame(pl.from_pandas(df))
+        return from_polars(pl.from_pandas(df).lazy())
+    return from_polars(pl.from_pandas(df))
 
 def floor(x):
     """
@@ -475,6 +487,35 @@ def floor(x):
     """
     x = _col_expr(x)
     return x.floor()
+
+def from_polars(frame):
+    """
+    Convert `polars.DataFrame` into `TibbleFrame`
+    Convert `polars.LazyFrame` into `TibbleLazy`
+
+    Parameters
+    ----------
+    frame: polars.DataFrame, polars.LazyFrame
+        The frame to be converted into `TibbleFrame` or `TibbleLazy`
+
+    Examples
+    --------
+    >>> tp.from_polars(pl.DataFrame({"x": [1, 2, 3], "y": [5, 9, 7]}))
+    """
+    frame = copy.copy(frame)
+
+    if isinstance(frame, pl.DataFrame):
+        frame.__class__ = TibbleFrame
+        return frame
+
+    elif isinstance(frame, pl.LazyFrame):
+        frame.__class__ = TibbleLazy
+        return frame
+
+    else:
+        raise TypeError("The given frame is not either pl.DataFrame or pl.LazyFrame")
+
+
 
 def if_else(condition, true, false):
     """
@@ -865,13 +906,13 @@ def read_csv(file: str,
              *args,
              **kwargs):
     """Simple wrapper around polars.read_csv"""
-    return pl.read_csv(file, *args, **kwargs).pipe(from_polars_frame)
+    return pl.read_csv(file, *args, **kwargs).pipe(from_polars)
 
 def read_parquet(source: str,
                  *args,
                  **kwargs):
     """Simple wrapper around polars.read_parquet"""
-    return pl.read_parquet(source, *args, **kwargs).pipe(from_polars_frame)
+    return pl.read_parquet(source, *args, **kwargs).pipe(from_polars)
 
 def rep(x, times = 1):
     """
@@ -896,7 +937,7 @@ def rep(x, times = 1):
     elif _is_list(x):
         out = x
     elif isinstance(x, tibble):
-        out = pl.concat([x for i in range(times)]).pipe(from_polars_frame)
+        out = pl.concat([x for i in range(times)]).pipe(from_polars)
     elif _is_iterable(x):
         out = list(x)
     else:
