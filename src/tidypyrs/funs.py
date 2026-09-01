@@ -883,7 +883,7 @@ def n_distinct(x):
     x = _col_expr(x)
     return x.n_unique()
 
-def quantile(x, quantile = .5):
+def quantile(x, quantile=0.5):
     """
     Get number of distinct values in a column
 
@@ -902,19 +902,15 @@ def quantile(x, quantile = .5):
     x = _col_expr(x)
     return x.quantile(quantile)
 
-def read_csv(file: str,
-             *args,
-             **kwargs):
+def read_csv(file: str, *args, **kwargs):
     """Simple wrapper around polars.read_csv"""
     return pl.read_csv(file, *args, **kwargs).pipe(from_polars)
 
-def read_parquet(source: str,
-                 *args,
-                 **kwargs):
+def read_parquet(source: str, *args, **kwargs):
     """Simple wrapper around polars.read_parquet"""
     return pl.read_parquet(source, *args, **kwargs).pipe(from_polars)
 
-def rep(x, times = 1):
+def rep(x, times=1):
     """
     Replicate the values in x
 
@@ -936,7 +932,7 @@ def rep(x, times = 1):
         out = x.to_list()
     elif _is_list(x):
         out = x
-    elif isinstance(x, tibble):
+    elif isinstance(x, (TibbleFrame, TibbleLazy)):
         out = pl.concat([x for i in range(times)]).pipe(from_polars)
     elif _is_iterable(x):
         out = list(x)

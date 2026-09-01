@@ -227,7 +227,7 @@ class TibbleLazy(pl.LazyFrame):
             lf = super().select(args).unique()
         return lf.pipe(_from_polars_lazy)
 
-    def drop(self, *args):
+    def drop(self, *args, strict=True):
         """
         Drop unwanted columns
 
@@ -240,9 +240,8 @@ class TibbleLazy(pl.LazyFrame):
         --------
         >>> tl.drop('x', 'y')
         """
-        args = _as_list(args)
-        drop_cols = self.select(args).names
-        return super().drop(drop_cols).pipe(_from_polars_lazy)
+        drop_cols = _as_list(args)
+        return super().drop(drop_cols, strict=strict).pipe(_from_polars_lazy)
 
     def drop_null(self, *args):
         """
@@ -266,11 +265,14 @@ class TibbleLazy(pl.LazyFrame):
             out = super().drop_nulls(args)
         return out.pipe(_from_polars_lazy)
 
-    def equals(self, other, null_equal = True):
-        """Check if two tibbles are equal"""
-        lf = self.as_polars()
-        other = other.as_polars()
-        return lf.equals(other, null_equal = null_equal)
+    def equals(self, other, null_equal=True):
+        """
+        Check if two TibbleLazy are equal
+        Note: this requires calling `collect()` to realize the TibbleFrame
+        """
+        lf = self.as_polars().collect()
+        other = other.as_polars().collect()
+        return lf.equals(other, null_equal=null_equal)
 
     def glimpse(self):
         """
@@ -409,33 +411,19 @@ class TibbleLazy(pl.LazyFrame):
             of which will be sorted by `index_column` (but note that if `group_by` columns are
             passed, it will only be sorted within each group).
         """
-        index_column_py = parse_into_expression(index_column)
-        if offset is None:
-            offset = "0ns"
-
-        if period is None:
-            period = every
-
-        period = parse_as_duration_string(period)
-        offset = parse_as_duration_string(offset)
-        every = parse_as_duration_string(every)
-
-        pyexprs_by = (
-            parse_into_list_of_expressions(group_by) if group_by is not None else []
+        grouped = super().group_by_dynamic(
+            index_column,
+            every=every,
+            period=period,
+            offset=offset,
+            include_boundaries=include_boundaries,
+            closed=closed,
+            label=label,
+            group_by=group_by,
+            start_by=start_by,
         )
 
-        group_by = self._ldf.group_by_dynamic(
-            index_column_py,
-            every,
-            period,
-            offset,
-            label,
-            include_boundaries,
-            closed,
-            pyexprs_by,
-            start_by,
-        )
-        return TibbleLazyGroupBy(group_by, _from_polars_lazy)
+        return TibbleLazyGroupBy(grouped, _from_polars_lazy)
 
     def fill(self, *args, direction='down', over=None):
         """
@@ -621,10 +609,7 @@ class TibbleLazy(pl.LazyFrame):
         out = _mutate_cols(self.as_polars(), exprs)
         return out.pipe(_from_polars_lazy)
 
-    def pivot_longer(self,
-                     cols = everything(),
-                     names_to = "name",
-                     values_to = "value"):
+    def pivot_longer(self, cols=everything(), names_to="name", values_to="value"):
         """
         Pivot data from wide to long
 
@@ -649,13 +634,7 @@ class TibbleLazy(pl.LazyFrame):
         out = super().unpivot(index = id_vars, on = value_vars, variable_name = names_to, value_name = values_to)
         return out.pipe(_from_polars_lazy)
 
-    def pivot_wider(self,
-                    names_from = 'name',
-                    names_list = None,
-                    values_from = 'value',
-                    id_cols = None,
-                    values_fn = 'first',
-                    values_fill = None):
+    def pivot_wider(self, names_from='name', names_list=None, values_from='value', id_cols=None, values_fn='first', values_fill=None):
         """
         Pivot data from long to wide
 
@@ -716,6 +695,30 @@ class TibbleLazy(pl.LazyFrame):
 
     def print(self):
         self.pipe(print)
+
+    def pull(self, var=None):
+        """
+        Extract a column as a series
+
+        NOTICE 1: for TibbleFrame, this requires calling `.collect()`,
+                  what it runs under the hood is `tl.select(var).collect().to_series()`
+
+        NOTICE 2: for TibbleFrame, if `var` is not provided,
+                  it will run `collect_schema()` under the hood to get column names
+
+        Parameters
+        ----------
+        var : str
+            Name of the column to extract. Defaults to the last column.
+
+        Examples
+        --------
+        >>> tf = tp.TibbleFrame({'a': range(3), 'b': range(3))
+        >>> tf.pull('a')
+        """
+        if var == None:
+            var = self.colnames[-1]
+        return super().select(var).collect().to_series()
 
     def relocate(self, *args, _before = None, _after = None):
         """
@@ -901,7 +904,7 @@ class TibbleLazy(pl.LazyFrame):
         rows = _as_list(args)
 
         if _uses_over(over):
-            tl = super().select(pl.all().gather(rows).over(over))
+            tl = super().select(pl.all().gather(rows).over(over, mapping_strategy="explode"))
         else:
             tl = super().select(pl.all().gather(rows))
         return tl.pipe(_from_polars_lazy)
@@ -923,12 +926,10 @@ class TibbleLazy(pl.LazyFrame):
         >>> tl.slice_head(2)
         >>> tl.slice_head(1, over='c')
         """
-        col_order = self.names
         if _uses_over(over):
-            tl = super().group_by(over).head(n)
+            tl = super().select(pl.all().head(n).over(over, mapping_strategy="explode"))
         else:
             tl = super().head(n)
-        tl = tl.select(col_order)
         return tl.pipe(_from_polars_lazy)
 
     def slice_tail(self, n=5, *, over=None):
@@ -948,12 +949,10 @@ class TibbleLazy(pl.LazyFrame):
         >>> tl.slice_tail(2)
         >>> tl.slice_tail(1, over='c')
         """
-        col_order = self.names
         if _uses_over(over):
-            tl = super().group_by(over).tail(n)
+            tl = super().select(pl.all().tail(n).over(over, mapping_strategy="explode"))
         else:
             tl = super().tail(n)
-        tl = tl.select(col_order)
         return tl.pipe(_from_polars_lazy)
 
     def summarise(self, *args, **kwargs):
@@ -1126,14 +1125,13 @@ _polars_methods = [
     'replace',
     'replace_at_idx',
     'row',
-    'rows'
+    'rows',
     'sample',
     'select_at_idx',
     'shape',
     'shift',
     'shift_and_fill',
     'shrink_to_fit',
-    'sort',
     'std',
     'sum',
     # 'to_arrow',
@@ -1142,8 +1140,8 @@ _polars_methods = [
     'to_dummies',
     'to_ipc',
     'to_json',
-    'to_numpy'
-    'to_pandas'
+    'to_numpy',
+    'to_pandas',
     'to_parquet',
     'transpose',
     'unnest',

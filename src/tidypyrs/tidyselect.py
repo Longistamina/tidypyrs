@@ -1,32 +1,26 @@
-import polars as pl
 import polars.selectors as cs
+import re
 
 __all__ = ["contains", "ends_with", "everything", "starts_with", "where"]
 
-def contains(match, ignore_case = True):
+def contains(match, ignore_case=True):
     """
-    Contains a literal string
+    Select columns whose names contain a literal string.
 
     Parameters
     ----------
     match : str
-        String to match columns
+        Literal substring to find in column names.
 
     ignore_case : bool
-        If TRUE, the default, ignores case when matching names.
-
-    Examples
-    --------
-    >>> df = tp.tibble({'a': range(3), 'b': range(3), 'c': ['a', 'a', 'b']})
-    >>> df.select(tp.contains('c'))
+        If True, ignore case when matching names.
     """
     if ignore_case:
-        out = cs.matches(f"^(?i){match}.*$") # ``(?i)`` is ignoring case pattern matching (case-insensitive)
-    else:
-        out = cs.contains(match)
-    return out
+        return cs.matches(rf"(?i){re.escape(match)}")
 
-def starts_with(match, ignore_case = True):
+    return cs.contains(match)
+
+def starts_with(match, ignore_case=True):
     """
     Starts with a prefix
 

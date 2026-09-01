@@ -116,7 +116,7 @@ def str_paste0(*args):
     >>> df = tp.Tibble(x = ['a', 'b', 'c'])
     >>> df.mutate(xend = tp.paste0(tp.col('x'), 'end'))
     """
-    return paste(*args, sep = '')
+    return str_paste(*args, sep = '')
 
 def str_concat(*args, sep = ''):
     """
@@ -132,7 +132,7 @@ def str_concat(*args, sep = ''):
     >>> df = tp.Tibble(x = ['a', 'b', 'c'])
     >>> df.mutate(x_end = str_c(tp.col('x'), 'end', sep = '_'))
     """
-    return paste(*args, sep = sep)
+    return str_paste(*args, sep = sep)
 
 ##------------------------------------##
 

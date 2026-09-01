@@ -247,7 +247,7 @@ class TibbleFrame(pl.DataFrame):
             df = super().select(args).unique()
         return df.pipe(_from_polars_frame)
 
-    def drop(self, *args):
+    def drop(self, *args, strict=True):
         """
         Drop unwanted columns
 
@@ -260,9 +260,8 @@ class TibbleFrame(pl.DataFrame):
         --------
         >>> tf.drop('x', 'y')
         """
-        args = _as_list(args)
-        drop_cols = self.select(args).names
-        return super().drop(drop_cols).pipe(_from_polars_frame)
+        drop_cols = _as_list(args)
+        return super().drop(drop_cols, strict=strict).pipe(_from_polars_frame)
 
     def drop_null(self, *args):
         """
@@ -730,8 +729,7 @@ class TibbleFrame(pl.DataFrame):
         >>> tf.pull('a')
         """
         if var == None:
-            var = self.names[-1]
-
+            var = self.colnames[-1]
         return super().get_column(var)
 
     def relocate(self, *args, _before=None, _after=None):
@@ -918,7 +916,7 @@ class TibbleFrame(pl.DataFrame):
         rows = _as_list(args)
 
         if _uses_over(over):
-            tf = super().select(pl.all().gather(rows).over(over))
+            tf = super().select(pl.all().gather(rows).over(over, mapping_strategy="explode"))
         else:
             tf = super().select(pl.all().gather(rows))
         return tf.pipe(_from_polars_frame)
@@ -940,12 +938,10 @@ class TibbleFrame(pl.DataFrame):
         >>> tf.slice_head(2)
         >>> tf.slice_head(1, over='c')
         """
-        col_order = self.names
         if _uses_over(over):
-            tf = super().group_by(over).head(n)
+            tf = super().select(pl.all().head(n).over(over, mapping_strategy="explode"))
         else:
             tf = super().head(n)
-        tf = tf.select(col_order)
         return tf.pipe(_from_polars_frame)
 
     def slice_tail(self, n=5, *, over=None):
@@ -965,12 +961,10 @@ class TibbleFrame(pl.DataFrame):
         >>> tf.slice_tail(2)
         >>> tf.slice_tail(1, over='c')
         """
-        col_order = self.names
         if _uses_over(over):
-            tf = super().group_by(over).tail(n)
+            tf = super().select(pl.all().tail(n).over(over, mapping_strategy="explode"))
         else:
             tf = super().tail(n)
-        tf = tf.select(col_order)
         return tf.pipe(_from_polars_frame)
 
     def summarise(self, *args, **kwargs):
@@ -1189,7 +1183,6 @@ _polars_methods = [
     'shift',
     'shift_and_fill',
     'shrink_to_fit',
-    'sort',
     'std',
     'sum',
     # 'to_arrow',
