@@ -175,10 +175,6 @@ class TibbleLazy(pl.LazyFrame):
         from tidypyrs.tibble_frame import _from_polars_frame
         return super().collect(engine=engine).pipe(_from_polars_frame)
 
-    def colnames(self):
-        "Use `collect_schema()` to resolve for column names"
-        return _as_list(self.collect_schema().keys())
-
     def count(self, *args, sort = False, name = 'n'):
         """
         Returns row counts of the dataset.
@@ -1025,15 +1021,28 @@ class TibbleLazy(pl.LazyFrame):
         return out
 
     @property
-    def names(self):
+    def colnames(self):
         """
-        Get column names
+        Use `collect_schema()` to resolve for column names,
+        return as pl.Series
 
         Examples
         --------
-        >>> tl.names
+        >>> tl.colnames
         """
-        return super().columns
+        return pl.Series(super().collect_schema().keys())
+
+    @property
+    def columns(self):
+        """
+        Use `collect_schema()` to resolve for column names,
+        return as pl.Series
+
+        Examples
+        --------
+        >>> tl.columns
+        """
+        return pl.Series(super().collect_schema().keys())
 
 ##--------------------------------------------------------------------------------------##
 

@@ -3,7 +3,6 @@ from datetime import timedelta
 import functools as ft
 from .utils import (
     _as_list,
-    _col_expr,
     _col_exprs,
     _is_expr,
     _is_string,
