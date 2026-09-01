@@ -140,11 +140,10 @@ def as_enum(x, categories=None, reverse=False):
     Expr
         Expression casting `x` to Enum.
     """
-    if isinstance(x, _Deferred):
-        return x.map(
+    if isinstance(x, _Deferred): # x = f.select("col") = _Deferred(lambda frame: frame.select("col"))
+        return x.map( # x.map(...) = _Deferred(lambda frame: _as_enum_resolved(frame.select("col"), categories, reverse))
             lambda selected: _as_enum_resolved(selected, categories=categories, reverse=reverse)
         )
-
     return _as_enum_resolved(x, categories=categories, reverse=reverse)
 
 def _as_enum_resolved(x, categories=None, reverse=False):
