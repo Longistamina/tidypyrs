@@ -2,6 +2,7 @@ import polars as pl
 import polars.selectors as cs
 from operator import not_
 from itertools import chain
+from .f_namespace import _Deferred
 
 __all__ = []
 
@@ -108,18 +109,27 @@ def _str_to_lit(x):
 # ========================================================
 
 def _lit_expr(x):
-    if not_(_is_expr(x)):
+    # Deferred expressions must be resolved by _mutate_cols().
+    if isinstance(x, _Deferred):
+        return x
+
+    if not _is_expr(x):
         x = pl.lit(x)
+
     return x
 
 # ======================================================
 # Mutate columns with given dataframe and expressions
 # ======================================================
 
-def _mutate_cols(df, exprs):
+def _mutate_cols(frame, exprs):
     for expr in exprs:
-        df = df.with_columns(expr)
-    return df
+        if isinstance(expr, _Deferred):
+            expr = expr.resolve(frame)
+
+        frame = frame.with_columns(expr)
+
+    return frame
 
 # ======================================================
 # Column expression related utilities

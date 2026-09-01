@@ -12,6 +12,7 @@ from .utils import (
     _is_series,
     _str_to_lit
 )
+from .f_namespace import _Deferred
 
 __all__ = [
     # General functions
@@ -124,8 +125,9 @@ def as_enum(x, categories=None, reverse=False):
 
     Parameters
     ----------
-    x : TibbleFrame, TibbleLazy
-        The output of selecting single column ``df.select("x")`` or ``lf.select("x")``
+    x : str, col_expr, TibbleFrame, TibbleLazy
+        String or column expression,
+        or the output of selecting single column ``df.select("x")`` or ``lf.select("x")``
 
     categories : iterable of str, Series, optional
         Enum categories in their desired order.
@@ -138,13 +140,20 @@ def as_enum(x, categories=None, reverse=False):
     Expr
         Expression casting `x` to Enum.
     """
+    if isinstance(x, _Deferred):
+        return x.map(
+            lambda selected: _as_enum_resolved(selected, categories=categories, reverse=reverse)
+        )
 
+    return _as_enum_resolved(x, categories=categories, reverse=reverse)
+
+def _as_enum_resolved(x, categories=None, reverse=False):
     if categories is None:
-        if isinstance(x, TibbleFrame):
+        if isinstance(x, pl.DataFrame):
             categories = x.to_series().cast(pl.String).drop_nulls().unique().sort()
             x = categories.name
 
-        elif isinstance(x, TibbleLazy):
+        elif isinstance(x, pl.LazyFrame):
             categories = x.collect().to_series().cast(pl.String).drop_nulls().unique().sort()
             x = categories.name
 

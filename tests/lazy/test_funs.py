@@ -57,6 +57,36 @@ def test_agg_stats():
     )
     assert actual.equals(expected), "aggregation stats failed"
 
+def test_as_factor():
+    """Can use as_factor"""
+    tl = tp.TibbleLazy(
+        x = range(0, 10, 2),
+        y = ["a", "b", "b", "c", "a"]
+    ).mutate(y = tp.as_factor(c('y')))
+
+    assert tl.pull("y").dtype == tp.Categorical, "as_factor failed"
+
+def test_as_ordered():
+    """Can use as_ordered"""
+    tl = tp.TibbleLazy(
+        x = range(0, 10, 2),
+        y = ["a", "b", "b", "c", "a"]
+    )
+    tl = tl.mutate(y = tp.as_ordered(tl.select("y")))
+    assert tl.pull("y").dtype == tp.Enum, "as_ordered failed"
+
+def test_as_ordered_reverse():
+    """Can use as_ordered(reverse=True)"""
+    tl = tp.TibbleLazy(
+        x = range(0, 10, 2),
+        y = ["a", "b", "b", "c", "a"]
+    )
+    tl = tl.mutate(y = tp.as_ordered(tl.select("y"), reverse=True))
+
+    actual = tl.pull("y").dtype.categories
+    expected = tp.Series(["c", "b", "a"])
+    assert actual.equals(expected), "as_ordered(reverse=True) failed"
+
 def test_case_when():
     """Can use case_when"""
     tl = tp.TibbleLazy(x = range(1, 4))

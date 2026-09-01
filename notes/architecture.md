@@ -8,6 +8,7 @@
 - [7. tibble_frame.py](#7-tibbleframepy)
 - [8. tibble_lazy.py](#8-tibblelazypy)
 - [9. funs.py](#9-funspy)
+- [10. f_namespace.py](#10-fnamespacepy)
 
 # 1. reexports.py
 Import essential Polars classes and functions that will become
@@ -156,4 +157,20 @@ import tidypyrs as tp
 
 tp.as_enum()
 tp.as_categorical()
+```
+
+# 10. f_namespace.py
+This file contains the definitions of ```_Deferred``` and ```_FrameReference``` classess   
+which allow bypassing the need of ```.pipe()``` method in certain cases.   
+
+Example:   
+```
+import tidypyrs as tp
+from tidypyrs import f
+
+tl = tp.TibbleLazy(
+    y=["b", "a", "b"]
+).mutate(
+    y=tp.as_ordered(f.select("y"))
+)
 ```

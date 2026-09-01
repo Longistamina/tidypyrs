@@ -5,7 +5,7 @@ try:
 except PackageNotFoundError:
     __version__ = "0+unknown"
 
-
+from . import f_namespace as _f_namespace
 from . import funs as _funs
 from . import lubridate as _lubridate
 from . import reexports as _reexports
@@ -14,6 +14,7 @@ from . import tibble_frame as _tibble_frame
 from . import tibble_lazy as _tibble_lazy
 from . import tidyselect as _tidyselect
 
+from .f_namespace import *
 from .funs import *
 from .lubridate import *
 from .reexports import *
@@ -25,6 +26,7 @@ from .tidyselect import *
 
 __all__ = [
     "__version__",
+    *_f_namespace.__all__,
     *_funs.__all__,
     *_lubridate.__all__,
     *_reexports.__all__,
