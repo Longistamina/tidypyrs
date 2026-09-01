@@ -3,7 +3,7 @@ from importlib.metadata import PackageNotFoundError, version
 try:
     __version__ = version("tidypyrs")
 except PackageNotFoundError:
-    __version__ = "0+unknown"
+    __version__ = "0.1.0"
 
 from . import f_namespace as _f_namespace
 from . import funs as _funs

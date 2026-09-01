@@ -1,15 +1,36 @@
 [project]
 name = "tidypyrs"
 version = "0.1.0"
-description = "Add your description here"
+description = "Bring Tidyverse to Python with Polars backend"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Longistamina", email = "dophamthelong03@gmail.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
-    "numpy>=2.5.2",
+    "numpy>=2.2.0",
     "polars>=1.44.1",
+]
+keywords = [
+    "polars",
+    "tidyverse",
+    "dplyr",
+    "dataframe",
+    "data-science",
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
 ]
 
 [build-system]
@@ -23,3 +44,8 @@ dev = [
     "pytest-cov>=7.1.0",
     "ruff>=0.16.5",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Longistamina/tidypyrs.git"
+Repository = "https://github.com/Longistamina/tidypyrs.git"
+Issues = "https://github.com/Longistamina/tidypyrs/issues"
