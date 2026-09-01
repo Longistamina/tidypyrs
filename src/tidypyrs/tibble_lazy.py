@@ -1030,7 +1030,7 @@ class TibbleLazy(pl.LazyFrame):
         --------
         >>> tl.colnames
         """
-        return pl.Series(super().collect_schema().keys())
+        return pl.Series(super().collect_schema().keys(), dtype=pl.String)
 
     @property
     def columns(self):
@@ -1042,7 +1042,7 @@ class TibbleLazy(pl.LazyFrame):
         --------
         >>> tl.columns
         """
-        return pl.Series(super().collect_schema().keys())
+        return pl.Series(super().collect_schema().keys(), dtype=pl.String)
 
 ##--------------------------------------------------------------------------------------##
 

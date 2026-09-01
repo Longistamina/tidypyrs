@@ -1066,7 +1066,7 @@ class TibbleFrame(pl.DataFrame):
         --------
         >>> tf.columns
         """
-        return pl.Series(super()._df.columns(), dtype=pl.String)
+        return pl.Series(super().columns, dtype=pl.String)
 
     @property
     def ncol(self):
