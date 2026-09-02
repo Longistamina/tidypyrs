@@ -24,8 +24,9 @@ __all__ = [
     #####################
     "str_remove_all",
     "str_remove",
-    "str_trim"
+    "str_trim",
 ]
+
 
 def str_length(string):
     """
@@ -44,7 +45,9 @@ def str_length(string):
     string = _col_expr(string)
     return string.str.len_bytes()
 
+
 ##------------------------------------##
+
 
 def str_to_lower(string):
     """
@@ -63,6 +66,7 @@ def str_to_lower(string):
     string = _col_expr(string)
     return string.str.to_lowercase()
 
+
 def str_to_upper(string):
     """
     Convert case of a string
@@ -80,9 +84,11 @@ def str_to_upper(string):
     string = _col_expr(string)
     return string.str.to_uppercase()
 
+
 ##------------------------------------##
 
-def str_paste(*args, sep=' '):
+
+def str_paste(*args, sep=" "):
     """
     Concatenate strings together
 
@@ -97,10 +103,13 @@ def str_paste(*args, sep=' '):
     >>> tf.mutate(x_end = tp.paste(tp.col('x'), 'end', sep = '_'))
     """
     args = _as_list(args)
-    args = [pl.lit(arg) if not isinstance(arg, pl.Expr) else arg for arg in args] # [pl.lit(arg), pl.lit(arg), pl.lit(arg), ...]
-    curlies = ['{}'] * len(args) # ['{}', '{}', '{}', '{}', ...]
-    string_format = sep.join(curlies) # "{}sep{}sep{}sep{}sep{}...{}"
-    return pl.format(string_format, *args) # "{arg}sep{arg}sep{arg}...{arg}"
+    args = [
+        pl.lit(arg) if not isinstance(arg, pl.Expr) else arg for arg in args
+    ]  # [pl.lit(arg), pl.lit(arg), pl.lit(arg), ...]
+    curlies = ["{}"] * len(args)  # ['{}', '{}', '{}', '{}', ...]
+    string_format = sep.join(curlies)  # "{}sep{}sep{}sep{}sep{}...{}"
+    return pl.format(string_format, *args)  # "{arg}sep{arg}sep{arg}...{arg}"
+
 
 def str_paste0(*args):
     """
@@ -116,9 +125,10 @@ def str_paste0(*args):
     >>> tf = tp.TibbleFrame(x = ['a', 'b', 'c'])
     >>> tf.mutate(xend = tp.paste0(tp.col('x'), 'end'))
     """
-    return str_paste(*args, sep='')
+    return str_paste(*args, sep="")
 
-def str_concat(*args, sep=''):
+
+def str_concat(*args, sep=""):
     """
     Concatenate strings together
 
@@ -134,7 +144,9 @@ def str_concat(*args, sep=''):
     """
     return str_paste(*args, sep=sep)
 
+
 ##------------------------------------##
+
 
 def str_detect(string, pattern, negate=False):
     """
@@ -155,17 +167,20 @@ def str_detect(string, pattern, negate=False):
     >>> tf.mutate(x = str_detect('name', 'a'))
     >>> tf.mutate(x = str_detect('name', ['a', 'e']))
     """
-    if isinstance(pattern, str): # "a" -> ["a"]
+    if isinstance(pattern, str):  # "a" -> ["a"]
         pattern = [pattern]
 
-    string = _col_expr(string) # "col_name" -> pl.lit("col_name")
+    string = _col_expr(string)  # "col_name" -> pl.lit("col_name")
 
-    exprs = (string.str.contains(p) for p in pattern) # lazy generator of (True, False, True, False, ...)
-    exprs = ft.reduce(lambda a, b : a & b, exprs) # True if all are True, else False
+    exprs = (
+        string.str.contains(p) for p in pattern
+    )  # lazy generator of (True, False, True, False, ...)
+    exprs = ft.reduce(lambda a, b: a & b, exprs)  # True if all are True, else False
     if negate:
         exprs = exprs.not_()
 
     return exprs
+
 
 def str_starts(string, pattern, negate=False):
     """
@@ -188,6 +203,7 @@ def str_starts(string, pattern, negate=False):
     pattern = "^" + pattern
     return str_detect(string, pattern, negate)
 
+
 def str_ends(string, pattern, negate=False):
     """
     Detect the presence or absence of a pattern at the end of a string.
@@ -209,7 +225,9 @@ def str_ends(string, pattern, negate=False):
     pattern = pattern + "$"
     return str_detect(string, pattern, negate)
 
+
 ##------------------------------------##
+
 
 def str_replace(string, pattern, replacement):
     """
@@ -232,6 +250,7 @@ def str_replace(string, pattern, replacement):
     string = _col_expr(string)
     return string.str.replace(pattern, replacement)
 
+
 def str_replace_all(string, pattern, replacement):
     """
     Replaces all matched patterns in a string
@@ -253,7 +272,9 @@ def str_replace_all(string, pattern, replacement):
     string = _col_expr(string)
     return string.str.replace_all(pattern, replacement)
 
+
 ##------------------------------------##
+
 
 def str_sub(string, start=0, end=None):
     """
@@ -276,6 +297,7 @@ def str_sub(string, start=0, end=None):
     string = _col_expr(string)
     return string.str.slice(start, end)
 
+
 def str_extract(string, pattern):
     """
     Extract the target capture group from provided patterns
@@ -295,7 +317,9 @@ def str_extract(string, pattern):
     string = _col_expr(string)
     return string.str.extract(pattern, 0)
 
+
 ##------------------------------------##
+
 
 def str_remove(string, pattern):
     """
@@ -315,6 +339,7 @@ def str_remove(string, pattern):
     """
     return str_replace(string, pattern, "")
 
+
 def str_remove_all(string, pattern):
     """
     Removes all matched patterns in a string
@@ -333,7 +358,9 @@ def str_remove_all(string, pattern):
     """
     return str_replace_all(string, pattern, "")
 
+
 ##------------------------------------##
+
 
 def str_trim(string, side="both"):
     """
@@ -365,11 +392,13 @@ def str_trim(string, side="both"):
         raise ValueError("side must be one of 'both', 'left', or 'right'")
     return out
 
+
 def _str_trim_left(x):
     """
     Remove leading whitespace.
     """
     return x.str.replace(r"^\s*", "")
+
 
 def _str_trim_right(x):
     """

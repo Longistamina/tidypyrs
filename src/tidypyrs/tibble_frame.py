@@ -9,7 +9,7 @@ from .utils import (
     _kwargs_as_exprs,
     _mutate_cols,
     _uses_over,
-    _over_exprs
+    _over_exprs,
 )
 from .stringr import str_concat
 from .groupby import TibbleGroupBy
@@ -24,10 +24,12 @@ __all__ = [
     "TibbleFrame",
 ]
 
+
 class TibbleFrame(pl.DataFrame):
     """
     An eager data frame object that provides methods familiar to R tidyverse users.
     """
+
     def __init__(self, _data=None, **kwargs):
         if len(kwargs) > 0:
             _data = kwargs
@@ -37,17 +39,49 @@ class TibbleFrame(pl.DataFrame):
 
     def __dir__(self):
         _TibbleFrame_methods = [
-            'arrange', 'as_dict', 'as_pandas', 'as_polars',
-            'bind_cols', 'bind_rows', 'colnames', 'clone', 'count',
-            'distinct', 'drop', 'drop_null', 'head', 'fill', 'filter',
-            'glimpse', 'group_by', 'group_by_dynamic',
-            'inner_join', 'lazy', 'left_join', 'mutate', 'names', 'nrow', 'ncol',
-            'full_join', 'pivot_longer', 'pivot_wider',
-            'print',
-            'pull', 'relocate', 'rename', 'replace_null', 'select',
-            'separate', 'set_names',
-            'slice', 'slice_head', 'slice_tail', 'summarize', 'tail',
-            'write_csv', 'write_parquet'
+            "arrange",
+            "as_dict",
+            "as_pandas",
+            "as_polars",
+            "bind_cols",
+            "bind_rows",
+            "colnames",
+            "clone",
+            "count",
+            "distinct",
+            "drop",
+            "drop_null",
+            "head",
+            "fill",
+            "filter",
+            "glimpse",
+            "group_by",
+            "group_by_dynamic",
+            "inner_join",
+            "lazy",
+            "left_join",
+            "mutate",
+            "names",
+            "nrow",
+            "ncol",
+            "full_join",
+            "pivot_longer",
+            "pivot_wider",
+            "print",
+            "pull",
+            "relocate",
+            "rename",
+            "replace_null",
+            "select",
+            "separate",
+            "set_names",
+            "slice",
+            "slice_head",
+            "slice_tail",
+            "summarize",
+            "tail",
+            "write_csv",
+            "write_parquet",
         ]
         return _TibbleFrame_methods
 
@@ -108,6 +142,7 @@ class TibbleFrame(pl.DataFrame):
         >>> tf.arrange(tp.desc('x'), 'y')
         """
         from .funs import DescCol
+
         exprs = _as_list(args)
         desc = [bool(isinstance(expr, DescCol)) for expr in exprs]
         return super().sort(exprs, descending=desc).pipe(_from_polars_frame)
@@ -195,7 +230,7 @@ class TibbleFrame(pl.DataFrame):
         """Very cheap deep clone"""
         return super().clone().pipe(_from_polars_frame)
 
-    def count(self, *args, sort=False, name='n'):
+    def count(self, *args, sort=False, name="n"):
         """
         Returns row counts of the dataset.
         If bare column names are provided, count() returns counts by group.
@@ -221,6 +256,7 @@ class TibbleFrame(pl.DataFrame):
 
         if sort == True:
             from .funs import desc
+
             out = out.arrange(desc(name))
 
         return out
@@ -300,7 +336,7 @@ class TibbleFrame(pl.DataFrame):
         """
         return self.as_polars().glimpse()
 
-    def group_by(self, *by, maintain_order: bool=False, **named_by):
+    def group_by(self, *by, maintain_order: bool = False, **named_by):
         """
         Start a group by operation.
 
@@ -346,7 +382,7 @@ class TibbleFrame(pl.DataFrame):
         closed="left",
         label="left",
         group_by=None,
-        start_by="window"
+        start_by="window",
     ) -> TibbleGroupBy:
         """
         Group based on a time value (or index value of type Int32, Int64).
@@ -435,14 +471,15 @@ class TibbleFrame(pl.DataFrame):
             period=period,
             offset=offset,
             include_boundaries=include_boundaries,
-            closed=closed, label=label,
+            closed=closed,
+            label=label,
             group_by=group_by,
             start_by=start_by,
         )
 
         return TibbleGroupBy(group_by, _from_polars_frame)
 
-    def fill(self, *args, direction='down', over=None):
+    def fill(self, *args, direction="down", over=None):
         """
         Fill in missing values with previous or next value
 
@@ -468,21 +505,21 @@ class TibbleFrame(pl.DataFrame):
         >>> tf.fill('a', 'b', direction='downup')
         """
         args = _as_list(args)
-        if len(args) == 0: return self
+        if len(args) == 0:
+            return self
         args = _col_exprs(args)
-        options = {'down': 'forward', 'up': 'backward'}
-        if direction in ['down', 'up']:
+        options = {"down": "forward", "up": "backward"}
+        if direction in ["down", "up"]:
             direction = options[direction]
             exprs = [arg.fill_null(strategy=direction) for arg in args]
-        elif direction == 'downup':
+        elif direction == "downup":
             exprs = [
-                arg.fill_null(strategy='forward').fill_null(strategy='backward')
+                arg.fill_null(strategy="forward").fill_null(strategy="backward")
                 for arg in args
             ]
-        elif direction == 'updown':
+        elif direction == "updown":
             exprs = [
-                arg.fill_null(strategy='backward')
-                .fill_null(strategy='forward')
+                arg.fill_null(strategy="backward").fill_null(strategy="forward")
                 for arg in args
             ]
         else:
@@ -516,7 +553,9 @@ class TibbleFrame(pl.DataFrame):
         out = super().filter(predicate)
         return out.pipe(_from_polars_frame)
 
-    def full_join(self, tf, left_on=None, right_on=None, on=None, suffix: str='_right'):
+    def full_join(
+        self, tf, left_on=None, right_on=None, on=None, suffix: str = "_right"
+    ):
         """
         Perform an full join
 
@@ -541,14 +580,22 @@ class TibbleFrame(pl.DataFrame):
         """
         if (left_on is None) & (right_on is None) & (on is None):
             on = list(set(self.colnames) & set(tf.colnames))
-        out = super().join(tf, on, "full", left_on=left_on, right_on=right_on, suffix=suffix, coalesce=True)
+        out = super().join(
+            tf,
+            on,
+            "full",
+            left_on=left_on,
+            right_on=right_on,
+            suffix=suffix,
+            coalesce=True,
+        )
         return out.pipe(_from_polars_frame)
 
     def head(self, n=5, *, over=None):
         """Alias for `.slice_head()`"""
         return self.slice_head(n, over=over).pipe(_from_polars_frame)
 
-    def inner_join(self, tf, left_on=None, right_on=None, on=None, suffix='_right'):
+    def inner_join(self, tf, left_on=None, right_on=None, on=None, suffix="_right"):
         """
         Perform an inner join
 
@@ -573,14 +620,19 @@ class TibbleFrame(pl.DataFrame):
         """
         if (left_on is None) & (right_on is None) & (on is None):
             on = list(set(self.colnames) & set(tf.colnames))
-        return super().join(tf, on, 'inner', left_on=left_on, right_on= right_on, suffix= suffix).pipe(_from_polars_frame)
+        return (
+            super()
+            .join(tf, on, "inner", left_on=left_on, right_on=right_on, suffix=suffix)
+            .pipe(_from_polars_frame)
+        )
 
     def lazy(self):
         "Convert TibbleFrame to TibbleLazy"
         from .tibble_lazy import _from_polars_lazy
+
         return super().lazy().pipe(_from_polars_lazy)
 
-    def left_join(self, tf, left_on=None, right_on=None, on=None, suffix='_right'):
+    def left_join(self, tf, left_on=None, right_on=None, on=None, suffix="_right"):
         """
         Perform a left join
 
@@ -605,7 +657,11 @@ class TibbleFrame(pl.DataFrame):
         """
         if (left_on is None) & (right_on is None) & (on is None):
             on = list(set(self.colnames) & set(tf.colnames))
-        return super().join(tf, on, 'left',  left_on=left_on, right_on= right_on, suffix= suffix).pipe(_from_polars_frame)
+        return (
+            super()
+            .join(tf, on, "left", left_on=left_on, right_on=right_on, suffix=suffix)
+            .pipe(_from_polars_frame)
+        )
 
     def mutate(self, *args, over=None, **kwargs):
         """
@@ -660,10 +716,20 @@ class TibbleFrame(pl.DataFrame):
         tf_cols = pl.Series(self.colnames)
         value_vars = self.select(cols).colnames
         id_vars = tf_cols.filter(tf_cols.is_in(value_vars).not_()).to_list()
-        out = super().unpivot(index=id_vars, on=value_vars, variable_name=names_to, value_name=values_to)
+        out = super().unpivot(
+            index=id_vars, on=value_vars, variable_name=names_to, value_name=values_to
+        )
         return out.pipe(_from_polars_frame)
 
-    def pivot_wider(self, names_from='name', names_list=None, values_from='value', id_cols=None, values_fn='first', values_fill=None):
+    def pivot_wider(
+        self,
+        names_from="name",
+        names_list=None,
+        values_from="value",
+        id_cols=None,
+        values_fn="first",
+        values_fill=None,
+    ):
         """
         Pivot data from long to wide
 
@@ -699,12 +765,18 @@ class TibbleFrame(pl.DataFrame):
         no_id = len(id_cols) == 0
 
         if no_id:
-            id_cols = '_id'
+            id_cols = "_id"
             self = self.mutate(_id=pl.lit(1))
 
         out = (
             super()
-            .pivot(values=values_from, index=id_cols, on=names_from, on_columns=names_list, aggregate_function=values_fn)
+            .pivot(
+                values=values_from,
+                index=id_cols,
+                on=names_from,
+                on_columns=names_list,
+                aggregate_function=values_fn,
+            )
             .pipe(_from_polars_frame)
         )
 
@@ -714,7 +786,8 @@ class TibbleFrame(pl.DataFrame):
             fill_exprs = [col(new_col).fill_null(values_fill) for new_col in new_cols]
             out = out.mutate(*fill_exprs)
 
-        if no_id: out = out.drop('_id')
+        if no_id:
+            out = out.drop("_id")
 
         return out
 
@@ -756,21 +829,21 @@ class TibbleFrame(pl.DataFrame):
         """
         cols_all = pl.Series(self.colnames)
         locs_all = pl.Series(range(len(cols_all)))
-        locs_dict = {k:v for k,v in zip(cols_all, locs_all)}
+        locs_dict = {k: v for k, v in zip(cols_all, locs_all)}
         locs_tf = pl.DataFrame(locs_dict, orient="row")
 
         cols_relocate = _as_list(args)
         locs_relocate = pl.Series(locs_tf.select(cols_relocate).row(0))
 
-        if (len(locs_relocate) == 0):
+        if len(locs_relocate) == 0:
             return self
 
         uses_before = _is_expr(_before) | _is_string(_before)
         uses_after = _is_expr(_after) | _is_string(_after)
 
-        if (uses_before & uses_after):
+        if uses_before & uses_after:
             raise ValueError("Cannot provide both before and after")
-        elif (not_(uses_before) & not_(uses_after)):
+        elif not_(uses_before) & not_(uses_after):
             _before = cols_all[0]
             uses_before = True
 
@@ -782,7 +855,9 @@ class TibbleFrame(pl.DataFrame):
             locs_start = locs_all.filter(locs_all <= _after)
 
         locs_start = locs_start.filter(~locs_start.is_in(locs_relocate))
-        final_order = pl.concat([locs_start, locs_relocate, locs_all]).unique(maintain_order=True)
+        final_order = pl.concat([locs_start, locs_relocate, locs_all]).unique(
+            maintain_order=True
+        )
         final_order = cols_all[final_order].to_list()
 
         return self.select(final_order)
@@ -805,7 +880,7 @@ class TibbleFrame(pl.DataFrame):
         >>> tf.rename({'x': 'new_x'}) # pandas interface
         """
         if mapping is None:
-            mapping = {value:key for key, value in kwargs.items()}
+            mapping = {value: key for key, value in kwargs.items()}
         return super().rename(mapping).pipe(_from_polars_frame)
 
     def replace_null(self, replace=None):
@@ -822,13 +897,14 @@ class TibbleFrame(pl.DataFrame):
         >>> tf = tp.TibbleFrame(x=[0, None], y=[None, None])
         >>> tf.replace_null(dict(x=1, y=2))
         """
-        if replace is None: return self
+        if replace is None:
+            return self
         if type(replace) != dict:
             raise ValueError("replace must be a dictionary of column/replacement pairs")
         replace_exprs = [col(key).fill_null(value) for key, value in replace.items()]
         return self.mutate(*replace_exprs)
 
-    def separate(self, sep_col, into, sep='_', remove=True):
+    def separate(self, sep_col, into, sep="_", remove=True):
         """
         Separate a character column into multiple columns
 
@@ -850,13 +926,13 @@ class TibbleFrame(pl.DataFrame):
         """
         into_len = len(into) - 1
         sep_tf = (
-            self
-            .as_polars()
-            .select(col(sep_col)
-                    .str.split_exact(sep, into_len)
-                    .alias("_seps")
-                    .struct
-                    .rename_fields(into))
+            self.as_polars()
+            .select(
+                col(sep_col)
+                .str.split_exact(sep, into_len)
+                .alias("_seps")
+                .struct.rename_fields(into)
+            )
             .unnest("_seps")
             .pipe(_from_polars_frame)
         )
@@ -882,7 +958,7 @@ class TibbleFrame(pl.DataFrame):
         if nm is None:
             nm = self.colnames
         nm = _as_list(nm)
-        rename_dict = {k:v for k, v in zip(self.colnames, nm)}
+        rename_dict = {k: v for k, v in zip(self.colnames, nm)}
         return self.rename(rename_dict)
 
     def select(self, *args):
@@ -924,7 +1000,9 @@ class TibbleFrame(pl.DataFrame):
         rows = _as_list(args)
 
         if _uses_over(over):
-            tf = super().select(pl.all().gather(rows).over(over, mapping_strategy="explode"))
+            tf = super().select(
+                pl.all().gather(rows).over(over, mapping_strategy="explode")
+            )
         else:
             tf = super().select(pl.all().gather(rows))
         return tf.pipe(_from_polars_frame)
@@ -1041,13 +1119,17 @@ class TibbleFrame(pl.DataFrame):
             out = out.drop(unite_cols)
         return out
 
-    def write_csv(self, file=None, has_headers=True, sep=','):
+    def write_csv(self, file=None, has_headers=True, sep=","):
         """Write a data frame to a csv"""
         return super().write_csv(file, include_header=has_headers, separator=sep)
 
-    def write_parquet(self, file=str, compression='snappy', use_pyarrow=False, **kwargs):
+    def write_parquet(
+        self, file=str, compression="snappy", use_pyarrow=False, **kwargs
+    ):
         """Write a data frame to a parquet"""
-        return super().write_parquet(file, compression=compression, use_pyarrow=use_pyarrow, **kwargs)
+        return super().write_parquet(
+            file, compression=compression, use_pyarrow=use_pyarrow, **kwargs
+        )
 
     @property
     def colnames(self):
@@ -1104,7 +1186,9 @@ class TibbleFrame(pl.DataFrame):
         """
         return super().plot
 
+
 ##--------------------------------------------------------------------------------------##
+
 
 def as_tf(x):
     """
@@ -1129,6 +1213,7 @@ def as_tf(x):
         out = _from_polars_frame(pl.from_dataframe(x))
     return out
 
+
 def is_tf(x):
     """
     Is an object to a TibbleFrame
@@ -1143,74 +1228,73 @@ def is_tf(x):
     """
     return isinstance(x, TibbleFrame)
 
+
 def _from_polars_frame(tf):
     tf = copy.copy(tf)
     tf.__class__ = TibbleFrame
     return tf
 
-_allowed_methods = [
-    'dtypes', 'frame_equal',
-    'get_columns', 'lazy', 'pipe'
-]
+
+_allowed_methods = ["dtypes", "frame_equal", "get_columns", "lazy", "pipe"]
 
 _polars_methods = [
-    'apply',
-    'columns',
-    'describe',
-    'downsample',
-    'drop_duplicates',
-    'explode',
-    'fill_nan',
-    'fill_null',
-    'find_idx_by_name',
-    'fold',
-    'get_column',
-    'groupby',
-    'hash_rows',
-    'height',
-    'hstack',
-    'insert_at_idx',
-    'interpolate',
-    'is_duplicated',
-    'is_unique',
-    'join',
-    'limit',
-    'max',
-    'mean',
-    'median',
-    'min',
-    'n_chunks',
-    'null_count',
-    'quantile',
-    'rechunk',
-    'replace',
-    'replace_at_idx',
-    'row',
-    'rows',
-    'sample',
-    'select_at_idx',
-    'shape',
-    'shift',
-    'shift_and_fill',
-    'shrink_to_fit',
-    'std',
-    'sum',
+    "apply",
+    "columns",
+    "describe",
+    "downsample",
+    "drop_duplicates",
+    "explode",
+    "fill_nan",
+    "fill_null",
+    "find_idx_by_name",
+    "fold",
+    "get_column",
+    "groupby",
+    "hash_rows",
+    "height",
+    "hstack",
+    "insert_at_idx",
+    "interpolate",
+    "is_duplicated",
+    "is_unique",
+    "join",
+    "limit",
+    "max",
+    "mean",
+    "median",
+    "min",
+    "n_chunks",
+    "null_count",
+    "quantile",
+    "rechunk",
+    "replace",
+    "replace_at_idx",
+    "row",
+    "rows",
+    "sample",
+    "select_at_idx",
+    "shape",
+    "shift",
+    "shift_and_fill",
+    "shrink_to_fit",
+    "std",
+    "sum",
     # 'to_arrow',
     # 'to_dict',
-    'to_dicts',
-    'to_dummies',
-    'to_ipc',
-    'to_json',
-    'to_numpy',
-    'to_pandas',
-    'to_parquet',
-    'transpose',
-    'unnest',
-    'unpivot',
-    'var',
-    'width',
-    'with_column',
-    'with_columns',
-    'with_column_renamed',
-    'with_columns'
+    "to_dicts",
+    "to_dummies",
+    "to_ipc",
+    "to_json",
+    "to_numpy",
+    "to_pandas",
+    "to_parquet",
+    "transpose",
+    "unnest",
+    "unpivot",
+    "var",
+    "width",
+    "with_column",
+    "with_columns",
+    "with_column_renamed",
+    "with_columns",
 ]

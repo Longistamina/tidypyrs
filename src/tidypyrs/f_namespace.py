@@ -6,43 +6,47 @@ from typing import Any
 # define _Deferred class
 # ======================================
 
+
 class _Deferred:
     """An operation waiting for a DataFrame or LazyFrame."""
 
     __slots__ = ("_resolver",)
 
-    def __init__(self, resolver: Callable[[Any], Any]): # `resolver` function takes one argument of any type [Any], and return one value of any type Any
+    def __init__(
+        self, resolver: Callable[[Any], Any]
+    ):  # `resolver` function takes one argument of any type [Any], and return one value of any type Any
         self._resolver = resolver
 
     def resolve(self, frame):
         return self._resolver(frame)
 
     def map(self, function):
-        return _Deferred(
-            lambda frame: function(self.resolve(frame))
-        )
+        return _Deferred(lambda frame: function(self.resolve(frame)))
 
     def alias(self, name):
         return self.map(lambda expression: expression.alias(name))
+
 
 # =============================================
 # define _FrameReference for ``f`` namespace
 # =============================================
 
+
 class _FrameReference:
     __slots__ = ()
 
-    def __getitem__(self, name: str) -> pl.Expr:
+    def __getitem__(self, *names) -> pl.Expr:
         """
         Return a column expression.
 
         -----------------------------
-        Example:
+        Examples:
             f["a"] -> pl.col("a")
+            f["a", "b"] -> pl.col(["a", "b"])
         """
-        return pl.col(name)
+        return pl.col(*names)
 
-    def __getattr__(self, name: str) -> pl.Expr:
+    def __getattr__(self, name) -> pl.Expr:
         """
         Allow f.column_name syntax.
 
@@ -54,6 +58,17 @@ class _FrameReference:
             raise AttributeError(name)
 
         return pl.col(name)
+
+    def __call__(self, *names) -> pl.Expr:
+        """
+        Allow f("col") syntax.
+
+        --------------------------------
+        Examples:
+            f("a") -> pl.col("a")
+            f("a", "b", "c") -> pl.col("a", "b", "c")
+        """
+        return pl.col(*names)
 
     def select(self, *exprs, **named_exprs) -> _Deferred:
         """
@@ -69,18 +84,19 @@ class _FrameReference:
                 y = tp.as_enum(f.select("y"))
             )
         """
-        return _Deferred(
-            lambda frame: frame.select(*exprs, **named_exprs)
-        )
+        return _Deferred(lambda frame: frame.select(*exprs, **named_exprs))
+
+    sl = select  # Allows `f.sl("a")`
 
     def __repr__(self):
         return "f"
+
 
 f = _FrameReference()
 
 __all__ = ["f"]
 
-'''
+"""
 # =========================================================================
 # EXPLANATION OF F_NAMESPACE
 # =========================================================================
@@ -752,4 +768,4 @@ tf.mutate(
     )
 )
 ```
-'''
+"""

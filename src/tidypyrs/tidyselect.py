@@ -3,6 +3,7 @@ import re
 
 __all__ = ["contains", "ends_with", "everything", "starts_with", "where"]
 
+
 def contains(match, ignore_case=True):
     """
     Select columns whose names contain a literal string.
@@ -19,6 +20,7 @@ def contains(match, ignore_case=True):
         return cs.matches(rf"(?i){re.escape(match)}")
 
     return cs.contains(match)
+
 
 def starts_with(match, ignore_case=True):
     """
@@ -41,6 +43,7 @@ def starts_with(match, ignore_case=True):
     else:
         out = cs.starts_with(match)
     return out
+
 
 def ends_with(match, ignore_case=True):
     """
@@ -65,6 +68,7 @@ def ends_with(match, ignore_case=True):
         out = cs.ends_with(match)
     return out
 
+
 def everything():
     """
     Selects all columns
@@ -75,6 +79,7 @@ def everything():
     >>> tf.select(tp.everything())
     """
     return cs.all()
+
 
 _col_types = {
     "date": cs.date(),
@@ -87,8 +92,9 @@ _col_types = {
     "categorical": cs.categorical(),
     "factor": cs.categorical(),
     "ordered": cs.enum(),
-    "enum": cs.enum()
+    "enum": cs.enum(),
 }
+
 
 def where(col_type):
     """

@@ -1,203 +1,218 @@
-'''
+"""
 uv run pytest tests/lazy/test_funs.py
-'''
+"""
 
 import tidypyrs as tp
 from tidypyrs import col as c
 import polars.selectors as cs
 import math
 
+
 def test_abs():
     """Can get absolute value"""
-    tl = tp.TibbleLazy(x = range(-3, 0))
-    actual = tl.mutate(abs_x = tp.abs('x'), abs_col_x = tp.abs(c('x')))
-    expected = tp.TibbleLazy(x = range(-3, 0), abs_x = range(3, 0, -1), abs_col_x = range(3, 0, -1))
+    tl = tp.TibbleLazy(x=range(-3, 0))
+    actual = tl.mutate(abs_x=tp.abs("x"), abs_col_x=tp.abs(c("x")))
+    expected = tp.TibbleLazy(
+        x=range(-3, 0), abs_x=range(3, 0, -1), abs_col_x=range(3, 0, -1)
+    )
     assert actual.equals(expected), "abs failed"
+
 
 def test_agg_stats():
     """Can get aggregation statistics"""
-    tl = tp.TibbleLazy(x = range(3), y = [2, 1, 0])
-    actual = (
-        tl
-        .summarize(
-            corr = tp.cor('x', 'y'),
-            count_x = tp.count('x'), count_col_x = tp.count(c('x')),
-            cov = tp.cov('x', 'y'),
-            first_x = tp.first('x'), first_col_x = tp.first(c('x')),
-            last_x = tp.last('x'), last_col_x = tp.last(c('x')),
-            max_x = tp.max('x'), max_col_x = tp.max(c('x')),
-            mean_x = tp.mean('x'), mean_col_x = tp.mean(c('x')),
-            median_x = tp.median('x'), median_col_x = tp.median(c('x')),
-            min_x = tp.min('x'), min_col_x = tp.min(c('x')),
-            n = tp.n(),
-            n_distinct_x = tp.n_distinct('x'), n_distinct_col_x = tp.n_distinct(c('x')),
-            quantile_x = tp.quantile('x', .25),
-            sd_x = tp.sd('x'), sd_col_x = tp.sd(c('x')),
-            sum_x = tp.sum('x'), sum_col_x = tp.sum(c('x')),
-            var_y = tp.var('y')
-        )
-        .mutate(tp.as_integer(cs.numeric().as_expr()))
-    )
+    tl = tp.TibbleLazy(x=range(3), y=[2, 1, 0])
+    actual = tl.summarize(
+        corr=tp.cor("x", "y"),
+        count_x=tp.count("x"),
+        count_col_x=tp.count(c("x")),
+        cov=tp.cov("x", "y"),
+        first_x=tp.first("x"),
+        first_col_x=tp.first(c("x")),
+        last_x=tp.last("x"),
+        last_col_x=tp.last(c("x")),
+        max_x=tp.max("x"),
+        max_col_x=tp.max(c("x")),
+        mean_x=tp.mean("x"),
+        mean_col_x=tp.mean(c("x")),
+        median_x=tp.median("x"),
+        median_col_x=tp.median(c("x")),
+        min_x=tp.min("x"),
+        min_col_x=tp.min(c("x")),
+        n=tp.n(),
+        n_distinct_x=tp.n_distinct("x"),
+        n_distinct_col_x=tp.n_distinct(c("x")),
+        quantile_x=tp.quantile("x", 0.25),
+        sd_x=tp.sd("x"),
+        sd_col_x=tp.sd(c("x")),
+        sum_x=tp.sum("x"),
+        sum_col_x=tp.sum(c("x")),
+        var_y=tp.var("y"),
+    ).mutate(tp.as_integer(cs.numeric().as_expr()))
     expected = tp.TibbleLazy(
-        corr = [-1],
-        count_x = [3], count_col_x = [3],
-        cov = [-1],
-        first_x = [0], first_col_x = [0],
-        last_x = [2], last_col_x = [2],
-        max_x = [2], max_col_x = [2],
-        mean_x = [1], mean_col_x = [1],
-        median_x = [1], median_col_x = [1],
-        min_x = [0], min_col_x = [0],
-        n = [3],
-        n_distinct_x = [3], n_distinct_col_x = [3],
-        quantile_x = [1],
-        sd_x = [1], sd_col_x = [1],
-        sum_x = [3], sum_col_x = [3],
-        var_y = [1]
+        corr=[-1],
+        count_x=[3],
+        count_col_x=[3],
+        cov=[-1],
+        first_x=[0],
+        first_col_x=[0],
+        last_x=[2],
+        last_col_x=[2],
+        max_x=[2],
+        max_col_x=[2],
+        mean_x=[1],
+        mean_col_x=[1],
+        median_x=[1],
+        median_col_x=[1],
+        min_x=[0],
+        min_col_x=[0],
+        n=[3],
+        n_distinct_x=[3],
+        n_distinct_col_x=[3],
+        quantile_x=[1],
+        sd_x=[1],
+        sd_col_x=[1],
+        sum_x=[3],
+        sum_col_x=[3],
+        var_y=[1],
     )
     assert actual.equals(expected), "aggregation stats failed"
 
+
 def test_as_factor():
     """Can use as_factor"""
-    tl = tp.TibbleLazy(
-        x = range(0, 10, 2),
-        y = ["a", "b", "b", "c", "a"]
-    ).mutate(y = tp.as_factor(c('y')))
+    tl = tp.TibbleLazy(x=range(0, 10, 2), y=["a", "b", "b", "c", "a"]).mutate(
+        y=tp.as_factor(c("y"))
+    )
 
     assert tl.pull("y").dtype == tp.Categorical, "as_factor failed"
 
+
 def test_as_ordered():
     """Can use as_ordered"""
-    tl = tp.TibbleLazy(
-        x = range(0, 10, 2),
-        y = ["a", "b", "b", "c", "a"]
-    )
-    tl = tl.mutate(y = tp.as_ordered(tl.select("y")))
+    tl = tp.TibbleLazy(x=range(0, 10, 2), y=["a", "b", "b", "c", "a"])
+    tl = tl.mutate(y=tp.as_ordered(tl.select("y")))
     assert tl.pull("y").dtype == tp.Enum, "as_ordered failed"
+
 
 def test_as_ordered_reverse():
     """Can use as_ordered(reverse=True)"""
-    tl = tp.TibbleLazy(
-        x = range(0, 10, 2),
-        y = ["a", "b", "b", "c", "a"]
-    )
-    tl = tl.mutate(y = tp.as_ordered(tl.select("y"), reverse=True))
+    tl = tp.TibbleLazy(x=range(0, 10, 2), y=["a", "b", "b", "c", "a"])
+    tl = tl.mutate(y=tp.as_ordered(tl.select("y"), reverse=True))
 
     actual = tl.pull("y").dtype.categories
     expected = tp.Series(["c", "b", "a"])
     assert actual.equals(expected), "as_ordered(reverse=True) failed"
 
+
 def test_case_when():
     """Can use case_when"""
-    tl = tp.TibbleLazy(x = range(1, 4))
-    actual = tl.mutate(case_x = tp.case_when(c('x') < 2, 0,
-                                             c('x') < 3, 1,
-                                             _default = 0))
-    expected = tp.TibbleLazy(x = range(1, 4), case_x = [0, 1, 0])
+    tl = tp.TibbleLazy(x=range(1, 4))
+    actual = tl.mutate(case_x=tp.case_when(c("x") < 2, 0, c("x") < 3, 1, _default=0))
+    expected = tp.TibbleLazy(x=range(1, 4), case_x=[0, 1, 0])
     assert actual.equals(expected), "case_when failed"
+
 
 def test_casting():
     """Can do type casting"""
-    tl = tp.TibbleLazy(int_col = [0, 0, 1], float_col = [1.0, 2.0, 3.0], chr_col = ["1", "2", "3"])
-    actual = (
-        tl
-        .mutate(float_cast = tp.as_float('int_col'),
-                int_cast = tp.as_integer('float_col'),
-                string_cast = tp.as_string('int_col'),
-                bool_cast = tp.as_boolean('int_col'))
-        .select('float_cast', 'int_cast', 'string_cast', 'bool_cast')
+    tl = tp.TibbleLazy(
+        int_col=[0, 0, 1], float_col=[1.0, 2.0, 3.0], chr_col=["1", "2", "3"]
     )
-    expected = tp.TibbleLazy(float_cast = [0.0, 0.0, 1.0],
-                         int_cast = [1, 2, 3],
-                         string_cast = ["0", "0", "1"],
-                         bool_cast = [False, False, True])
+    actual = tl.mutate(
+        float_cast=tp.as_float("int_col"),
+        int_cast=tp.as_integer("float_col"),
+        string_cast=tp.as_string("int_col"),
+        bool_cast=tp.as_boolean("int_col"),
+    ).select("float_cast", "int_cast", "string_cast", "bool_cast")
+    expected = tp.TibbleLazy(
+        float_cast=[0.0, 0.0, 1.0],
+        int_cast=[1, 2, 3],
+        string_cast=["0", "0", "1"],
+        bool_cast=[False, False, True],
+    )
     assert actual.equals(expected), "casting failed"
+
 
 def test_coalesce():
     """Can use coalesce"""
-    tl = tp.TibbleLazy(x = [None, None, 1], y = [2, None, 2], z = [3, 3, 3])
-    actual = (
-        tl
-        .mutate(
-            coalesce_x = tp.coalesce(c('x'), c('y'), c('z'))
-        )
-        .select('coalesce_x')
+    tl = tp.TibbleLazy(x=[None, None, 1], y=[2, None, 2], z=[3, 3, 3])
+    actual = tl.mutate(coalesce_x=tp.coalesce(c("x"), c("y"), c("z"))).select(
+        "coalesce_x"
     )
-    expected = tp.TibbleLazy(coalesce_x = [2, 3, 1])
+    expected = tp.TibbleLazy(coalesce_x=[2, 3, 1])
     assert actual.equals(expected), "coalesce failed"
+
 
 def test_floor():
     """Can get the floor"""
-    tl = tp.TibbleLazy(x = [1.1, 5.5])
-    actual = tl.mutate(floor_x = tp.floor('x')).select('floor_x')
-    expected = tp.TibbleLazy(floor_x = [1.0, 5.0])
+    tl = tp.TibbleLazy(x=[1.1, 5.5])
+    actual = tl.mutate(floor_x=tp.floor("x")).select("floor_x")
+    expected = tp.TibbleLazy(floor_x=[1.0, 5.0])
     assert actual.equals(expected), "floor failed"
+
 
 def test_lag():
     """Can get lagging values with function"""
-    tl = tp.TibbleLazy({'x': range(3)})
-    actual = tl.mutate(lag_null = tp.lag(c('x')),
-                       lag_default = tp.lag('x', default = 1))
-    expected = tp.TibbleLazy({'x': range(3),
-                          'lag_null': [None, 0, 1],
-                          'lag_default': [1, 0, 1]})
-    assert actual.equals(expected, null_equal = True), "lag failed"
+    tl = tp.TibbleLazy({"x": range(3)})
+    actual = tl.mutate(lag_null=tp.lag(c("x")), lag_default=tp.lag("x", default=1))
+    expected = tp.TibbleLazy(
+        {"x": range(3), "lag_null": [None, 0, 1], "lag_default": [1, 0, 1]}
+    )
+    assert actual.equals(expected, null_equal=True), "lag failed"
+
 
 def test_lead():
     """Can get leading values with function"""
-    tl = tp.TibbleLazy({'x': range(3)})
-    actual = tl.mutate(lead_null = tp.lead(c('x')),
-                       lead_default = tp.lead('x', default = 1))
-    expected = tp.TibbleLazy({'x': range(3),
-                          'lead_null': [1, 2, None],
-                          'lead_default': [1, 2, 1]})
-    assert actual.equals(expected, null_equal = True), "lead failed"
+    tl = tp.TibbleLazy({"x": range(3)})
+    actual = tl.mutate(lead_null=tp.lead(c("x")), lead_default=tp.lead("x", default=1))
+    expected = tp.TibbleLazy(
+        {"x": range(3), "lead_null": [1, 2, None], "lead_default": [1, 2, 1]}
+    )
+    assert actual.equals(expected, null_equal=True), "lead failed"
+
 
 def test_logs():
     """Can get leading values with function"""
-    tl = tp.TibbleLazy({'x': range(1, 4)})
-    actual = tl.mutate(log = tp.log(c('x')).round(2),
-                       log10 = tp.log10('x').round(2))
-    expected = tl.mutate(log = c('x').log().round(2), log10 = c('x').log10().round(2))
+    tl = tp.TibbleLazy({"x": range(1, 4)})
+    actual = tl.mutate(log=tp.log(c("x")).round(2), log10=tp.log10("x").round(2))
+    expected = tl.mutate(log=c("x").log().round(2), log10=c("x").log10().round(2))
     assert actual.equals(expected), "log failed"
+
 
 def test_if_else():
     """Can use if_else"""
-    tl = tp.TibbleLazy(x = range(1, 4))
-    actual = tl.mutate(case_x = tp.if_else(c('x') < 2, 1, 0))
-    expected = tp.TibbleLazy(x = range(1, 4), case_x = [1, 0, 0])
+    tl = tp.TibbleLazy(x=range(1, 4))
+    actual = tl.mutate(case_x=tp.if_else(c("x") < 2, 1, 0))
+    expected = tp.TibbleLazy(x=range(1, 4), case_x=[1, 0, 0])
     assert actual.equals(expected), "if_else failed"
+
 
 def test_is_predicates():
     """Can use is predicates"""
-    tl = tp.TibbleLazy(
-        x = [0.0, 1.0, 2.0],
-        y = [None, math.inf, math.nan]
-    )
+    tl = tp.TibbleLazy(x=[0.0, 1.0, 2.0], y=[None, math.inf, math.nan])
     actual = (
-        tl
-        .mutate(
-            between = tp.between('x', 1, 2),
-            is_finite = tp.is_finite('x'),
-            is_in = tp.is_in('x', [1.0, 2.0]),
-            is_infinite = tp.is_infinite('y'),
-            is_not = tp.is_not(tp.is_finite(c('x'))),
-            is_not_in = tp.is_not_in('x', [1.0, 2.0]),
-            is_not_null = tp.is_not_null('y'),
-            is_null = tp.is_null('y')
+        tl.mutate(
+            between=tp.between("x", 1, 2),
+            is_finite=tp.is_finite("x"),
+            is_in=tp.is_in("x", [1.0, 2.0]),
+            is_infinite=tp.is_infinite("y"),
+            is_not=tp.is_not(tp.is_finite(c("x"))),
+            is_not_in=tp.is_not_in("x", [1.0, 2.0]),
+            is_not_null=tp.is_not_null("y"),
+            is_null=tp.is_null("y"),
         )
-    ).drop('x', 'y')
+    ).drop("x", "y")
     expected = tp.TibbleLazy(
-        between = [False, True, True],
-        is_finite = [True, True, True],
-        is_in = [False, True, True],
-        is_infinite = [None, True, False],
-        is_not = [False, False, False],
-        is_not_in = [True, False, False],
-        is_not_null = [False, True, True],
-        is_null = [True, False, False]
+        between=[False, True, True],
+        is_finite=[True, True, True],
+        is_in=[False, True, True],
+        is_infinite=[None, True, False],
+        is_not=[False, False, False],
+        is_not_in=[True, False, False],
+        is_not_null=[False, True, True],
+        is_null=[True, False, False],
     )
     assert actual.equals(expected, null_equal=True), "is_predicates failed"
+
 
 def test_rep():
     tl = tp.TibbleLazy(x=[0, 1], y=[0, 1])
@@ -205,42 +220,48 @@ def test_rep():
     assert tp.rep(1, 2).equals(tp.Series([1, 1])), "rep int failed"
     assert tp.rep("a", 2).equals(tp.Series(["a", "a"])), "rep str failed"
     assert tp.rep(True, 2).equals(tp.Series([True, True])), "rep bool failed"
-    assert tp.rep(tp.Series([0, 1]), 2).equals(tp.Series([0, 1, 0, 1])), "rep series failed"
+    assert tp.rep(tp.Series([0, 1]), 2).equals(tp.Series([0, 1, 0, 1])), (
+        "rep series failed"
+    )
+
 
 def test_replace_null():
     """Can replace nulls"""
-    tl = tp.TibbleLazy(x = [0, None], y = [None, None])
-    actual = tl.mutate(x = tp.replace_null(c('x'), 1))
-    expected = tp.TibbleLazy(x = [0, 1], y = [None, None])
+    tl = tp.TibbleLazy(x=[0, None], y=[None, None])
+    actual = tl.mutate(x=tp.replace_null(c("x"), 1))
+    expected = tp.TibbleLazy(x=[0, 1], y=[None, None])
     assert actual.equals(expected), "replace_null function failed"
+
 
 def test_row_number():
     """Can get row number"""
-    tl = tp.TibbleLazy(x = ['a', 'a', 'b'])
-    actual = tl.mutate(row_num = tp.row_number())
-    expected = tp.TibbleLazy(x = ['a', 'a', 'b'], row_num = [1, 2, 3])
+    tl = tp.TibbleLazy(x=["a", "a", "b"])
+    actual = tl.mutate(row_num=tp.row_number())
+    expected = tp.TibbleLazy(x=["a", "a", "b"], row_num=[1, 2, 3])
     assert actual.equals(expected), "row_number failed"
+
 
 def test_row_number_group():
     """Can get row number by group"""
-    tl = tp.TibbleLazy(x = ['a', 'a', 'b'])
-    actual = (
-        tl.mutate(group_row_num = tp.row_number(), over='x')
-        .arrange('x', 'group_row_num')
+    tl = tp.TibbleLazy(x=["a", "a", "b"])
+    actual = tl.mutate(group_row_num=tp.row_number(), over="x").arrange(
+        "x", "group_row_num"
     )
-    expected = tp.TibbleLazy(x = ['a', 'a', 'b'], group_row_num = [1, 2, 1])
+    expected = tp.TibbleLazy(x=["a", "a", "b"], group_row_num=[1, 2, 1])
     assert actual.equals(expected), "group row_number failed"
+
 
 def test_round():
     """Can round values"""
-    tl = tp.TibbleLazy(x = [1.11, 2.22, 3.33])
-    actual = tl.mutate(x = tp.round(c('x'), 1))
-    expected = tp.TibbleLazy(x = [1.1, 2.2, 3.3])
+    tl = tp.TibbleLazy(x=[1.11, 2.22, 3.33])
+    actual = tl.mutate(x=tp.round(c("x"), 1))
+    expected = tp.TibbleLazy(x=[1.1, 2.2, 3.3])
     assert actual.equals(expected), "round failed"
+
 
 def test_sqrt():
     """Can get the square root"""
-    tl = tp.TibbleLazy(x = [9, 25, 100])
-    actual = tl.mutate(x = tp.sqrt('x'))
-    expected = tp.TibbleLazy(x = [3, 5, 10])
+    tl = tp.TibbleLazy(x=[9, 25, 100])
+    actual = tl.mutate(x=tp.sqrt("x"))
+    expected = tp.TibbleLazy(x=[3, 5, 10])
     assert actual.equals(expected), "sqrt failed"

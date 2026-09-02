@@ -1,15 +1,30 @@
 import polars as pl
 
 __all__ = [
-    'col', 'exclude', 'lit', 'Expr', 'Series',
-
+    "col",
+    "exclude",
+    "lit",
+    "Expr",
+    "Series",
     # dtypes
-    'Int8', 'Int16', 'Int32', 'Int64',
-    'UInt8', 'UInt16', 'UInt32', 'UInt64',
-    'Float32', 'Float64', 'Boolean', 'Utf8',
-    'List',
-    'Date', 'Datetime',
-    'Categorical', 'Enum', 'Object'
+    "Int8",
+    "Int16",
+    "Int32",
+    "Int64",
+    "UInt8",
+    "UInt16",
+    "UInt32",
+    "UInt64",
+    "Float32",
+    "Float64",
+    "Boolean",
+    "Utf8",
+    "List",
+    "Date",
+    "Datetime",
+    "Categorical",
+    "Enum",
+    "Object",
 ]
 
 col = pl.col
