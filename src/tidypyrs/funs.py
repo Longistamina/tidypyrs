@@ -10,9 +10,9 @@ from .utils import (
     _is_list,
     _is_iterable,
     _is_series,
-    _str_to_lit
+    _str_to_lit,
 )
-from .f_namespace import _Deferred
+from .f_namespace import _defer_aware
 
 __all__ = [
     # General functions
@@ -23,35 +23,59 @@ __all__ = [
     "desc",
     "floor",
     "if_else",
-    "lag", "lead",
-    "log", "log10",
-    "read_csv", "read_parquet",
+    "lag",
+    "lead",
+    "log",
+    "log10",
+    "read_csv",
+    "read_parquet",
     "rep",
     "replace_null",
     "round",
     "row_number",
     "sqrt",
-
     # convert from pandas and polars,
     "from_pandas",
     "from_polars",
-
     # Agg stats
-    "cor", "cov", "count", "first", "last", "length",
-    "max", "mean", "median", "min", "n",
-    "n_distinct", "quantile", "sd", "sum", "var",
-
+    "cor",
+    "cov",
+    "count",
+    "first",
+    "last",
+    "length",
+    "max",
+    "mean",
+    "median",
+    "min",
+    "n",
+    "n_distinct",
+    "quantile",
+    "sd",
+    "sum",
+    "var",
     # Predicates
-    "between", "is_finite", "is_in", "is_infinite",
-    "is_nan", "is_not", "is_not_in", "is_not_null", "is_null",
-
+    "between",
+    "is_finite",
+    "is_in",
+    "is_infinite",
+    "is_nan",
+    "is_not",
+    "is_not_in",
+    "is_not_null",
+    "is_null",
     # Type conversion
-    "as_boolean", "as_categorical", "as_enum",
-    "as_factor", "as_float", "as_integer",
+    "as_boolean",
+    "as_categorical",
+    "as_enum",
+    "as_factor",
+    "as_float",
+    "as_integer",
     "as_ordered",
     "as_string",
-    "cast"
+    "cast",
 ]
+
 
 def across(cols, fn=lambda x: x, names_prefix=None):
     """
@@ -79,6 +103,7 @@ def across(cols, fn=lambda x: x, names_prefix=None):
         exprs = [expr.name.prefix(names_prefix) for expr in exprs]
     return exprs
 
+
 def as_boolean(x):
     """
     Convert to a boolean
@@ -94,6 +119,7 @@ def as_boolean(x):
     """
     x = _col_expr(x)
     return x.cast(pl.Boolean)
+
 
 def as_categorical(x):
     """
@@ -111,6 +137,8 @@ def as_categorical(x):
     x = _col_expr(x)
     return x.cast(pl.String).cast(pl.Categorical)
 
+
+@_defer_aware
 def as_enum(x, categories=None, reverse=False):
     """
     Convert a column to a Polars Enum.
@@ -140,13 +168,7 @@ def as_enum(x, categories=None, reverse=False):
     Expr
         Expression casting `x` to Enum.
     """
-    if isinstance(x, _Deferred): # x = f.select("col") = _Deferred(lambda frame: frame.select("col"))
-        return x.map( # x.map(...) = _Deferred(lambda frame: _as_enum_resolved(frame.select("col"), categories, reverse))
-            lambda selected: _as_enum_resolved(selected, categories=categories, reverse=reverse)
-        )
-    return _as_enum_resolved(x, categories=categories, reverse=reverse)
 
-def _as_enum_resolved(x, categories=None, reverse=False):
     if categories is None:
         if isinstance(x, pl.DataFrame):
             categories = x.to_series().cast(pl.String).drop_nulls().unique().sort()
@@ -157,9 +179,7 @@ def _as_enum_resolved(x, categories=None, reverse=False):
             x = categories.name
 
         else:
-            raise ValueError(
-                "`categories` or output from `tf.select('x')` must be provided"
-            )
+            raise ValueError("`categories` or output from `tf.select('x')` must be provided")
 
     elif not isinstance(x, str):
         raise TypeError("`categories` is provided, then `x` should be a string, not either TibbleFrame or TibbleLazy")
@@ -167,11 +187,8 @@ def _as_enum_resolved(x, categories=None, reverse=False):
     if reverse:
         categories = categories.reverse() if isinstance(categories, pl.Series) else _as_list(categories)[::-1]
 
-    return (
-        _col_expr(x)
-        .cast(pl.String)
-        .cast(pl.Enum(categories))
-    )
+    return _col_expr(x).cast(pl.String).cast(pl.Enum(categories))
+
 
 def as_factor(x):
     """
@@ -187,6 +204,7 @@ def as_factor(x):
     >>> tf.mutate(factor_x = tp.as_factor(col('x')))
     """
     return as_categorical(x)
+
 
 def as_float(x):
     """
@@ -204,6 +222,7 @@ def as_float(x):
     x = _col_expr(x)
     return x.cast(pl.Float64)
 
+
 def as_integer(x):
     """
     Convert to integer. Defaults to Int64.
@@ -219,6 +238,7 @@ def as_integer(x):
     """
     x = _col_expr(x)
     return x.cast(pl.Int64)
+
 
 def as_ordered(x, categories=None, reverse=False):
     """
@@ -252,6 +272,7 @@ def as_ordered(x, categories=None, reverse=False):
     """
     return as_enum(x, categories, reverse)
 
+
 def as_string(x):
     """
     Convert to string. Defaults to Utf8.
@@ -267,6 +288,7 @@ def as_string(x):
     """
     x = _col_expr(x)
     return x.cast(pl.Utf8)
+
 
 def abs(x):
     """
@@ -284,6 +306,7 @@ def abs(x):
     """
     x = _col_expr(x)
     return x.abs()
+
 
 def between(x, left, right):
     """
@@ -305,6 +328,7 @@ def between(x, left, right):
     """
     x = _col_expr(x)
     return x.is_between(left, right)
+
 
 def case_when(*args, _default=pl.Null):
     """
@@ -338,6 +362,7 @@ def case_when(*args, _default=pl.Null):
     expr = expr.otherwise(_default)
     return expr
 
+
 def cast(x, dtype):
     """
     General type conversion.
@@ -360,6 +385,7 @@ def cast(x, dtype):
     x = _col_expr(x)
     return x.cast(dtype)
 
+
 def coalesce(*args):
     """
     Coalesce missing values
@@ -381,7 +407,8 @@ def coalesce(*args):
             expr = if_else(expr.is_null(), args[i], expr)
     return expr
 
-def cor(x, y, method='pearson'):
+
+def cor(x, y, method="pearson"):
     """
     Find the correlation of two columns
 
@@ -398,9 +425,10 @@ def cor(x, y, method='pearson'):
     --------
     >>> tf.summarize(cor = tp.cor(col('x'), col('y')))
     """
-    if pl.Series([method]).is_in(['pearson', 'spearman']).not_().item():
+    if pl.Series([method]).is_in(["pearson", "spearman"]).not_().item():
         raise ValueError("`method` must be either 'pearson' or 'spearman'")
     return pl.corr(x, y, method=method)
+
 
 def cov(x, y):
     """
@@ -419,6 +447,7 @@ def cov(x, y):
     """
     return pl.cov(x, y)
 
+
 def count(x):
     """
     Number of observations in each group
@@ -435,6 +464,7 @@ def count(x):
     x = _col_expr(x)
     return x.count()
 
+
 def desc(x):
     """Mark a column to order in descending"""
     x = copy.copy(x)
@@ -442,8 +472,10 @@ def desc(x):
     x.__class__ = DescCol
     return x
 
+
 class DescCol(pl.Expr):
     pass
+
 
 def first(x):
     """
@@ -461,6 +493,7 @@ def first(x):
     """
     x = _col_expr(x)
     return x.first()
+
 
 def from_pandas(df, lazy=False):
     """
@@ -482,6 +515,7 @@ def from_pandas(df, lazy=False):
         return from_polars(pl.from_pandas(df).lazy())
     return from_polars(pl.from_pandas(df))
 
+
 def floor(x):
     """
     Round numbers down to the lower integer
@@ -497,6 +531,7 @@ def floor(x):
     """
     x = _col_expr(x)
     return x.floor()
+
 
 def from_polars(frame):
     """
@@ -526,7 +561,6 @@ def from_polars(frame):
         raise TypeError("The given frame is not either pl.DataFrame or pl.LazyFrame")
 
 
-
 def if_else(condition, true, false):
     """
     If Else
@@ -545,7 +579,8 @@ def if_else(condition, true, false):
     >>> tf = tp.TibbleFrame(x = range(1, 4))
     >>> tf.mutate(if_x = tp.if_else(col('x') < 2, 1, 2))
     """
-    return case_when(condition, true, _default = false)
+    return case_when(condition, true, _default=false)
+
 
 def is_finite(x):
     """
@@ -563,6 +598,7 @@ def is_finite(x):
     """
     x = _col_expr(x)
     return x.is_finite()
+
 
 def is_in(x, y):
     """
@@ -583,6 +619,7 @@ def is_in(x, y):
     x = _col_expr(x)
     return x.is_in(y)
 
+
 def is_infinite(x):
     """
     Test if values of a column are infinite
@@ -599,6 +636,7 @@ def is_infinite(x):
     """
     x = _col_expr(x)
     return x.is_infinite()
+
 
 def is_not(x):
     """
@@ -617,6 +655,7 @@ def is_not(x):
     x = _col_expr(x)
     return x.not_()
 
+
 def is_nan(x):
     """
     Test if values of a column are nan
@@ -633,6 +672,7 @@ def is_nan(x):
     """
     x = _col_expr(x)
     return x.is_nan()
+
 
 def is_not_in(x, y):
     """
@@ -653,6 +693,7 @@ def is_not_in(x, y):
     x = _col_expr(x)
     return x.is_in(y).not_()
 
+
 def is_not_null(x):
     """
     Test if values of a column are not null
@@ -670,6 +711,7 @@ def is_not_null(x):
     x = _col_expr(x)
     return x.is_null().not_()
 
+
 def is_null(x):
     """
     Test if values of a column are null
@@ -686,6 +728,7 @@ def is_null(x):
     """
     x = _col_expr(x)
     return x.is_null()
+
 
 def lag(x, n: int = 1, default=None):
     """
@@ -708,7 +751,8 @@ def lag(x, n: int = 1, default=None):
     >>> tf.mutate(lag_x = tp.lag('x'))
     """
     x = _col_expr(x)
-    return x.shift(n, fill_value = default)
+    return x.shift(n, fill_value=default)
+
 
 def last(x):
     """
@@ -726,6 +770,7 @@ def last(x):
     """
     x = _col_expr(x)
     return x.last()
+
 
 def lead(x, n: int = 1, default=None):
     """
@@ -748,7 +793,8 @@ def lead(x, n: int = 1, default=None):
     >>> tf.mutate(lead_x = col('x').lead())
     """
     x = _col_expr(x)
-    return x.shift(-n, fill_value = default)
+    return x.shift(-n, fill_value=default)
+
 
 def length(x):
     """
@@ -766,6 +812,7 @@ def length(x):
     x = _col_expr(x)
     return x.count()
 
+
 def log(x):
     """
     Compute the natural logarithm of a column
@@ -782,6 +829,7 @@ def log(x):
     x = _col_expr(x)
     return x.log()
 
+
 def log10(x):
     """
     Compute the base 10 logarithm of a column
@@ -797,6 +845,7 @@ def log10(x):
     """
     x = _col_expr(x)
     return x.log10()
+
 
 def max(x):
     """
@@ -815,6 +864,7 @@ def max(x):
     x = _col_expr(x)
     return x.max()
 
+
 def mean(x):
     """
     Get column mean
@@ -831,6 +881,7 @@ def mean(x):
     """
     x = _col_expr(x)
     return x.mean()
+
 
 def median(x):
     """
@@ -849,6 +900,7 @@ def median(x):
     x = _col_expr(x)
     return x.median()
 
+
 def min(x):
     """
     Get column minimum
@@ -866,6 +918,7 @@ def min(x):
     x = _col_expr(x)
     return x.min()
 
+
 def n():
     """
     Number of observations in each group
@@ -875,6 +928,7 @@ def n():
     >>> tf.summarize(count = tp.n())
     """
     return pl.len()
+
 
 def n_distinct(x):
     """
@@ -892,6 +946,7 @@ def n_distinct(x):
     """
     x = _col_expr(x)
     return x.n_unique()
+
 
 def quantile(x, quantile=0.5):
     """
@@ -912,13 +967,16 @@ def quantile(x, quantile=0.5):
     x = _col_expr(x)
     return x.quantile(quantile)
 
+
 def read_csv(file: str, *args, **kwargs):
     """Simple wrapper around polars.read_csv"""
     return pl.read_csv(file, *args, **kwargs).pipe(from_polars)
 
+
 def read_parquet(source: str, *args, **kwargs):
     """Simple wrapper around polars.read_parquet"""
     return pl.read_parquet(source, *args, **kwargs).pipe(from_polars)
+
 
 def rep(x, times=1):
     """
@@ -952,7 +1010,8 @@ def rep(x, times=1):
         out = pl.Series(out * times)
     return out
 
-def replace_null(x, replace = None):
+
+def replace_null(x, replace=None):
     """
     Replace null values
 
@@ -966,8 +1025,10 @@ def replace_null(x, replace = None):
     >>> tf = tp.TibbleFrame(x = [0, None], y = [None, None])
     >>> tf.mutate(x = tp.replace_null(col('x'), 1))
     """
-    if replace is None: return x
+    if replace is None:
+        return x
     return x.fill_null(replace)
+
 
 def round(x, decimals=0):
     """
@@ -987,6 +1048,7 @@ def round(x, decimals=0):
     x = _col_expr(x)
     return x.round(decimals)
 
+
 def row_number():
     """
     Return row number
@@ -996,6 +1058,7 @@ def row_number():
     >>> tf.mutate(row_num = tp.row_number())
     """
     return pl.int_range(0, pl.len()) + 1
+
 
 def sd(x):
     """
@@ -1014,6 +1077,7 @@ def sd(x):
     x = _col_expr(x)
     return x.std()
 
+
 def sqrt(x):
     """
     Get column square root
@@ -1029,6 +1093,7 @@ def sqrt(x):
     """
     x = _col_expr(x)
     return x.sqrt()
+
 
 def sum(x):
     """
@@ -1046,6 +1111,7 @@ def sum(x):
     """
     x = _col_expr(x)
     return x.sum()
+
 
 def var(x):
     """

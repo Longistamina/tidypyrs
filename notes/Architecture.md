@@ -168,11 +168,8 @@ Example:
 import tidypyrs as tp
 from tidypyrs import f
 
-tl = (
-    tp.TibbleLazy(y=["b", "a", "b"])
-    .mutate(
-        y=tp.as_ordered(f.select("y"))
-        # Don't need to call `.pipe(lambda f: f.mutate(y = tp.as_ordered(f.select("y"))))`
-    )
+tl = tp.TibbleLazy(y=["b", "a", "b"]).mutate(
+    y=tp.as_ordered(f.select("y"))
+    # Don't need to call `.pipe(lambda f: f.mutate(y = tp.as_ordered(f.select("y"))))`
 )
 ```

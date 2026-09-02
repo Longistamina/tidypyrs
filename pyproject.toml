@@ -53,3 +53,6 @@ dev = [
 Homepage = "https://github.com/Longistamina/tidypyrs.git"
 Repository = "https://github.com/Longistamina/tidypyrs.git"
 Issues = "https://github.com/Longistamina/tidypyrs/issues"
+
+[tool.ruff]
+line-length = 200

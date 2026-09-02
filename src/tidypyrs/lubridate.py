@@ -16,8 +16,9 @@ __all__ = [
     "wday",
     "week",
     "yday",
-    "year"
+    "year",
 ]
+
 
 def as_date(x, format=None):
     """
@@ -38,6 +39,7 @@ def as_date(x, format=None):
     x = _col_expr(x)
     return x.str.strptime(pl.Date, format=format)
 
+
 def as_datetime(x, format=None):
     """
     Convert a string to a Datetime
@@ -57,6 +59,7 @@ def as_datetime(x, format=None):
     x = _col_expr(x)
     return x.str.strptime(pl.Datetime, format=format)
 
+
 def hour(x):
     """
     Extract the hour from a datetime
@@ -73,6 +76,7 @@ def hour(x):
     x = _col_expr(x)
     return x.dt.hour()
 
+
 def mday(x):
     """
     Extract the month day from a date from 1 to 31.
@@ -88,6 +92,7 @@ def mday(x):
     """
     x = _col_expr(x)
     return x.dt.day()
+
 
 def make_date(year=1970, month=1, day=1):
     """
@@ -107,6 +112,7 @@ def make_date(year=1970, month=1, day=1):
     >>> tf.mutate(date=tp.make_date(2000, 1, 1))
     """
     return pl.date(year, month, day)
+
 
 def make_datetime(year=1970, month=1, day=1, hour=0, minute=0, second=0):
     """
@@ -133,6 +139,7 @@ def make_datetime(year=1970, month=1, day=1, hour=0, minute=0, second=0):
     """
     return pl.datetime(year, month, day, hour, minute, second)
 
+
 def minute(x):
     """
     Extract the minute from a datetime
@@ -148,6 +155,7 @@ def minute(x):
     """
     x = _col_expr(x)
     return x.dt.minute()
+
 
 def month(x):
     """
@@ -165,6 +173,7 @@ def month(x):
     x = _col_expr(x)
     return x.dt.month()
 
+
 def quarter(x):
     """
     Extract the quarter from a date
@@ -181,6 +190,7 @@ def quarter(x):
     x = _col_expr(x)
     return (x.dt.month() // 4) + 1
 
+
 _frequencies = {
     "year": "y",
     "quarter": "q",
@@ -192,8 +202,9 @@ _frequencies = {
     "second": "s",
     "ms": "ms",
     "us": "us",
-    "ns": "ns"
+    "ns": "ns",
 }
+
 
 def dt_round(x, rule, n=1):
     """
@@ -229,6 +240,7 @@ def dt_round(x, rule, n=1):
     every = str(n) + freq
     return x.dt.round(every)
 
+
 def second(x):
     """
     Extract the second from a datetime
@@ -244,6 +256,7 @@ def second(x):
     """
     x = _col_expr(x)
     return x.dt.second()
+
 
 def wday(x):
     """
@@ -261,6 +274,7 @@ def wday(x):
     x = _col_expr(x)
     return x.dt.weekday() + 1
 
+
 def week(x):
     """
     Extract the week from a date
@@ -277,6 +291,7 @@ def week(x):
     x = _col_expr(x)
     return x.dt.week()
 
+
 def yday(x):
     """
     Extract the year day from a date from 1 to 366.
@@ -292,6 +307,7 @@ def yday(x):
     """
     x = _col_expr(x)
     return x.dt.ordinal_day()
+
 
 def year(x):
     """

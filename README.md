@@ -27,22 +27,9 @@ tidypyrs methods are designed to work like tidyverse functions:
 import tidypyrs as tp
 from tidypyrs import col as c
 
-tf = tp.TibbleFrame(
-    x = range(3), 
-    y = range(3, 6), 
-    z = ['a', 'a', 'b']
-)
+tf = tp.TibbleFrame(x=range(3), y=range(3, 6), z=["a", "a", "b"])
 
-(
-    tf
-    .select('x', 'y', 'z')
-    .filter(col('x') < 4, c('y') > 1)
-    .arrange(desc('z'), 'x')
-    .mutate(
-        double_x = c('x') * 2,
-        x_plus_y = c('x') + c('y')
-    )
-)
+(tf.select("x", "y", "z").filter(col("x") < 4, c("y") > 1).arrange(desc("z"), "x").mutate(double_x=c("x") * 2, x_plus_y=c("x") + c("y")))
 ```
 
 ```
@@ -76,12 +63,8 @@ Library tidypyrs supports the same idea with `over` parameter.
 * Multiple columns can be passed with `over = ['y', 'z']`
 
 ```python
-tf = tp.TibbleFrame({'x': range(3), 'y': ['a', 'a', 'b']})
-print(
-    tf
-    .filter(c('x') <= c('x').mean(), over='y')
-    .arrange('y')
-)
+tf = tp.TibbleFrame({"x": range(3), "y": ["a", "a", "b"]})
+print(tf.filter(c("x") <= c("x").mean(), over="y").arrange("y"))
 ```
 
 ```
@@ -101,9 +84,9 @@ print(
 tidyselect functions can be mixed with normal selection when selecting columns:
 
 ```python
-tf = tp.TibbleFrame(x1 = range(3), x2 = range(3), y = range(3), z = range(3))
+tf = tp.TibbleFrame(x1=range(3), x2=range(3), y=range(3), z=range(3))
 
-tf.select(tp.starts_with('x'), 'z')
+tf.select(tp.starts_with("x"), "z")
 ```
 
 ```
@@ -123,7 +106,7 @@ tf.select(tp.starts_with('x'), 'z')
 To drop columns use the `.drop()` method:
 
 ```python
-tf.drop(tp.starts_with('x'), 'z')
+tf.drop(tp.starts_with("x"), "z")
 ```
 
 ```
@@ -185,26 +168,17 @@ import numpy as np
 # ================================
 
 tf = (
-    tp.TibbleFrame(y=["b", "a", "b"])
-    .mutate(
-        y = tp.as_ordered(f.select("y"))
-    )
+    tp.TibbleFrame(y=["b", "a", "b"]).mutate(y=tp.as_ordered(f.select("y")))
     # Don't need to call `.pipe(lambda f: f.mutate(y = tp.as_ordered(f.select("y"))))`
 )
 
-print(isinstance(tf.pull("y").dtype, pl.Enum)) # True
+print(isinstance(tf.pull("y").dtype, pl.Enum))  # True
 
 # ================================
 # Example with numpy functions
 # ================================
 
-tf = (
-    tp.TibbleFrame(x=[1, 4, 9])
-    .mutate(
-        x_root = np.sqrt(f["x"]),
-        x_sin = np.sin(f.x)
-    )
-)
+tf = tp.TibbleFrame(x=[1, 4, 9]).mutate(x_root=np.sqrt(f["x"]), x_sin=np.sin(f.x))
 ```
 
 ## Converting to/from pandas data frames
@@ -227,6 +201,6 @@ df = tf.as_pandas()
 To convert from a pandas `DataFrame` to a tidypyrs `TibbleFrame/TibbleLazy`:
 
 ```python
-tf = tp.as_tf(df) # TibbleFrame
-tl = tp.as_tl(df) # TibbleLazy
+tf = tp.as_tf(df)  # TibbleFrame
+tl = tp.as_tl(df)  # TibbleLazy
 ```
