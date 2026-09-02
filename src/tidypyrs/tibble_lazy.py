@@ -310,9 +310,7 @@ class TibbleLazy(pl.LazyFrame):
         """
         return self.as_polars().glimpse()
 
-    def group_by(
-        self, *by, maintain_order: bool = False, **named_by
-    ) -> TibbleLazyGroupBy:
+    def group_by(self, *by, maintain_order: bool = False, **named_by) -> TibbleLazyGroupBy:
         """
         Start a group by operation.
 
@@ -488,15 +486,9 @@ class TibbleLazy(pl.LazyFrame):
             direction = options[direction]
             exprs = [arg.fill_null(strategy=direction) for arg in args]
         elif direction == "downup":
-            exprs = [
-                arg.fill_null(strategy="forward").fill_null(strategy="backward")
-                for arg in args
-            ]
+            exprs = [arg.fill_null(strategy="forward").fill_null(strategy="backward") for arg in args]
         elif direction == "updown":
-            exprs = [
-                arg.fill_null(strategy="backward").fill_null(strategy="forward")
-                for arg in args
-            ]
+            exprs = [arg.fill_null(strategy="backward").fill_null(strategy="forward") for arg in args]
         else:
             raise ValueError("direction must be one of down, up, downup, or updown")
 
@@ -528,9 +520,7 @@ class TibbleLazy(pl.LazyFrame):
         out = super().filter(predicate)
         return out.pipe(_from_polars_lazy)
 
-    def full_join(
-        self, tl, left_on=None, right_on=None, on=None, suffix: str = "_right"
-    ):
+    def full_join(self, tl, left_on=None, right_on=None, on=None, suffix: str = "_right"):
         """
         Perform an full join
 
@@ -595,11 +585,7 @@ class TibbleLazy(pl.LazyFrame):
         """
         if (left_on is None) & (right_on is None) & (on is None):
             on = list(set(self.colnames) & set(tl.colnames))
-        return (
-            super()
-            .join(tl, on, "inner", left_on=left_on, right_on=right_on, suffix=suffix)
-            .pipe(_from_polars_lazy)
-        )
+        return super().join(tl, on, "inner", left_on=left_on, right_on=right_on, suffix=suffix).pipe(_from_polars_lazy)
 
     def left_join(self, tl, left_on=None, right_on=None, on=None, suffix="_right"):
         """
@@ -626,11 +612,7 @@ class TibbleLazy(pl.LazyFrame):
         """
         if (left_on is None) & (right_on is None) & (on is None):
             on = list(set(self.colnames) & set(tl.colnames))
-        return (
-            super()
-            .join(tl, on, "left", left_on=left_on, right_on=right_on, suffix=suffix)
-            .pipe(_from_polars_lazy)
-        )
+        return super().join(tl, on, "left", left_on=left_on, right_on=right_on, suffix=suffix).pipe(_from_polars_lazy)
 
     def mutate(self, *args, over=None, **kwargs):
         """
@@ -684,9 +666,7 @@ class TibbleLazy(pl.LazyFrame):
         tl_cols = pl.Series(self.colnames)
         value_vars = self.select(cols).colnames
         id_vars = tl_cols.filter(tl_cols.is_in(value_vars).not_()).to_list()
-        out = super().unpivot(
-            index=id_vars, on=value_vars, variable_name=names_to, value_name=values_to
-        )
+        out = super().unpivot(index=id_vars, on=value_vars, variable_name=names_to, value_name=values_to)
         return out.pipe(_from_polars_lazy)
 
     def pivot_wider(
@@ -833,9 +813,7 @@ class TibbleLazy(pl.LazyFrame):
             locs_start = locs_all.filter(locs_all <= _after)
 
         locs_start = locs_start.filter(~locs_start.is_in(locs_relocate))
-        final_order = pl.concat([locs_start, locs_relocate, locs_all]).unique(
-            maintain_order=True
-        )
+        final_order = pl.concat([locs_start, locs_relocate, locs_all]).unique(maintain_order=True)
         final_order = cols_all[final_order].to_list()
 
         return self.select(final_order)
@@ -903,17 +881,7 @@ class TibbleLazy(pl.LazyFrame):
         >>> tl.separate('x', into=['left', 'right'])
         """
         into_len = len(into) - 1
-        sep_tl = (
-            self.as_polars()
-            .select(
-                col(sep_col)
-                .str.split_exact(sep, into_len)
-                .alias("_seps")
-                .struct.rename_fields(into)
-            )
-            .unnest("_seps")
-            .pipe(_from_polars_lazy)
-        )
+        sep_tl = self.as_polars().select(col(sep_col).str.split_exact(sep, into_len).alias("_seps").struct.rename_fields(into)).unnest("_seps").pipe(_from_polars_lazy)
         out = self.bind_cols(sep_tl)
         if remove == True:
             out = out.drop(sep_col)
@@ -978,9 +946,7 @@ class TibbleLazy(pl.LazyFrame):
         rows = _as_list(args)
 
         if _uses_over(over):
-            tl = super().select(
-                pl.all().gather(rows).over(over, mapping_strategy="explode")
-            )
+            tl = super().select(pl.all().gather(rows).over(over, mapping_strategy="explode"))
         else:
             tl = super().select(pl.all().gather(rows))
         return tl.pipe(_from_polars_lazy)

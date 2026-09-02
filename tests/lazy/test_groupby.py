@@ -91,11 +91,7 @@ def test_group_by_multiple_columns():
         }
     )
 
-    actual = (
-        tl.group_by("group", "kind")
-        .summarize(total=c("value").sum())
-        .arrange("group", "kind")
-    )
+    actual = tl.group_by("group", "kind").summarize(total=c("value").sum()).arrange("group", "kind")
 
     expected = tp.TibbleLazy(
         {
@@ -143,11 +139,7 @@ def test_group_by_dynamic():
         }
     )
 
-    actual = (
-        tl.group_by_dynamic("date", every="1w")
-        .summarize(total=c("value").sum())
-        .arrange("date")
-    )
+    actual = tl.group_by_dynamic("date", every="1w").summarize(total=c("value").sum()).arrange("date")
 
     expected = tp.TibbleLazy(
         {

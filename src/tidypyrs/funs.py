@@ -167,45 +167,28 @@ def as_enum(x, categories=None, reverse=False):
     Expr
         Expression casting `x` to Enum.
     """
-    if isinstance(
-        x, _Deferred
-    ):  # x = f.select("col") = _Deferred(lambda frame: frame.select("col"))
-        return x.map(  # x.map(...) = _Deferred(lambda frame: _as_enum_resolved(frame.select("col"), categories, reverse))
-            lambda selected: _as_enum_resolved(
-                selected, categories=categories, reverse=reverse
-            )
+    if isinstance(x, _Deferred):  # x = f.select("col") = _Deferred(lambda frame: frame.select("col"))
+        return x.map(  # x.map(...) = _Deferred(lambda frame: as_enum(frame.select("col"), categories, reverse))
+            lambda selected: as_enum(selected, categories=categories, reverse=reverse)
         )
-    return _as_enum_resolved(x, categories=categories, reverse=reverse)
 
-
-def _as_enum_resolved(x, categories=None, reverse=False):
     if categories is None:
         if isinstance(x, pl.DataFrame):
             categories = x.to_series().cast(pl.String).drop_nulls().unique().sort()
             x = categories.name
 
         elif isinstance(x, pl.LazyFrame):
-            categories = (
-                x.collect().to_series().cast(pl.String).drop_nulls().unique().sort()
-            )
+            categories = x.collect().to_series().cast(pl.String).drop_nulls().unique().sort()
             x = categories.name
 
         else:
-            raise ValueError(
-                "`categories` or output from `tf.select('x')` must be provided"
-            )
+            raise ValueError("`categories` or output from `tf.select('x')` must be provided")
 
     elif not isinstance(x, str):
-        raise TypeError(
-            "`categories` is provided, then `x` should be a string, not either TibbleFrame or TibbleLazy"
-        )
+        raise TypeError("`categories` is provided, then `x` should be a string, not either TibbleFrame or TibbleLazy")
 
     if reverse:
-        categories = (
-            categories.reverse()
-            if isinstance(categories, pl.Series)
-            else _as_list(categories)[::-1]
-        )
+        categories = categories.reverse() if isinstance(categories, pl.Series) else _as_list(categories)[::-1]
 
     return _col_expr(x).cast(pl.String).cast(pl.Enum(categories))
 

@@ -8,9 +8,7 @@ from tidypyrs import col as c
 
 def test_date():
     """Can do date operations"""
-    tf = tp.TibbleFrame(x=["2021-01-01", "2021-10-01"]).mutate(
-        date=c("x").str.strptime(tp.Date)
-    )
+    tf = tp.TibbleFrame(x=["2021-01-01", "2021-10-01"]).mutate(date=c("x").str.strptime(tp.Date))
     actual = tf.mutate(
         date_check=tp.as_date("x"),
         mday=tp.mday("date"),

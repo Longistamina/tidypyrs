@@ -12,9 +12,7 @@ class _Deferred:
 
     __slots__ = ("_resolver",)
 
-    def __init__(
-        self, resolver: Callable[[Any], Any]
-    ):  # `resolver` function takes one argument of any type [Any], and return one value of any type Any
+    def __init__(self, resolver: Callable[[Any], Any]):  # `resolver` function takes one argument of any type [Any], and return one value of any type Any
         self._resolver = resolver
 
     def resolve(self, frame):
@@ -320,9 +318,9 @@ At this stage:
 - no lazy query has been collected;
 - only the future operation has been recorded.
 
-##----------------------------------------------------------##
-## 6. ``_Deferred``: storing and resolving the recipe       ##
-##----------------------------------------------------------##
+##----------------------------------------------------##
+## 6. ``_Deferred``: storing and resolving the recipe ##
+##----------------------------------------------------##
 
 The constructor receives a function and stores it in ``_resolver``:
 ```
@@ -379,9 +377,9 @@ current_frame.select("y")
 Before ``resolve()``, the object contains only a recipe. During ``resolve()``,
 the true current frame is supplied and the selection finally runs.
 
-##--------------------------------------------------------------##
-## 7. ``map()`` composes another deferred operation             ##
-##--------------------------------------------------------------##
+##--------------------------------------------------##
+## 7. ``map()`` composes another deferred operation ##
+##--------------------------------------------------##
 
 Selecting a column is only the first step.
 In our example, the selected frame must then be converted into an Enum expression.
@@ -404,14 +402,14 @@ d0 = _Deferred(
 We compose the conversion like this:
 ```
 d1 = d0.map(
-    lambda selected: _as_enum_resolved(selected)
+    lambda selected: as_enum(selected)
 )
 ```
 
 Conceptually, ``d1`` stores:
 ```
 d1 = _Deferred(
-    lambda frame: _as_enum_resolved(
+    lambda frame: as_enum(
         d0.resolve(frame)
     )
 )
@@ -419,7 +417,7 @@ d1 = _Deferred(
 
 Its expanded meaning is:
 ```
-lambda frame: _as_enum_resolved(
+lambda frame: as_enum(
     frame.select("y")
 )
 ```
@@ -432,7 +430,7 @@ d1.resolve(current_frame)
 Then the steps are:
 ```
 current_frame.select("y")
-    -> _as_enum_resolved(selected_frame)
+    -> as_enum(selected_frame)
 ```
 
 ``d0`` and ``d1`` are distinct ``_Deferred`` objects, but they are not
@@ -445,9 +443,9 @@ d0: select the column from the future frame
 d1: select the column, then convert it into an Enum expression
 ```
 
-##-------------------------------------------------------------------------------##
-## 8. How ``as_enum()`` extends the deferred recipe                              ##
-##-------------------------------------------------------------------------------##
+##--------------------------------------------------##
+## 8. How ``as_enum()`` extends the deferred recipe ##
+##--------------------------------------------------##
 
 Return to:
 ```
@@ -472,7 +470,7 @@ tp.as_enum(d0)
 ```
 if isinstance(x, _Deferred):
     return x.map(
-        lambda selected: _as_enum_resolved(
+        lambda selected: as_enum(
             selected,
             categories=categories,
             reverse=reverse,
@@ -483,7 +481,7 @@ if isinstance(x, _Deferred):
 Because ``x`` is ``d0``, ``x.map(...)`` creates:
 ```
 d1 = _Deferred(
-    lambda frame: _as_enum_resolved(
+    lambda frame: as_enum(
         d0.resolve(frame),
         categories=categories,
         reverse=reverse,
@@ -494,7 +492,7 @@ d1 = _Deferred(
 Its fully expanded meaning is:
 ```
 d1 = _Deferred(
-    lambda frame: _as_enum_resolved(
+    lambda frame: as_enum(
         frame.select("y"),
         categories=categories,
         reverse=reverse,
@@ -514,9 +512,9 @@ tf.mutate(y=d1)
 But ``d1`` is still a recipe rather than a Polars expression. The mutation
 normalization and execution layers must preserve and eventually resolve it.
 
-##---------------------------------------------------------------##
-## 9. Preserving ``_Deferred`` during mutate normalization       ##
-##---------------------------------------------------------------##
+##---------------------------------------------------------##
+## 9. Preserving ``_Deferred`` during mutate normalization ##
+##---------------------------------------------------------##
 
 Both ``TibbleFrame.mutate()`` and ``TibbleLazy.mutate()`` normalize their
 arguments before calling ``with_columns()``:
@@ -588,7 +586,7 @@ It uses ``map()`` to add one more layer to the recipe.
 Before aliasing:
 ```
 d1(frame)
-    = _as_enum_resolved(
+    = as_enum(
         frame.select("y")
       )
 ```
@@ -607,7 +605,7 @@ d2(frame)
 Expanding ``d1`` gives:
 ```
 d2(frame)
-    = _as_enum_resolved(
+    = as_enum(
         frame.select("y")
       ).alias("y")
 ```
@@ -627,9 +625,9 @@ d1: convert the selected frame into an Enum expression
 d2: alias the resulting expression as "y"
 ```
 
-##-----------------------------------------------------##
-## 11. Final resolution inside ``_mutate_cols()``      ##
-##-----------------------------------------------------##
+##------------------------------------------------##
+## 11. Final resolution inside ``_mutate_cols()`` ##
+##------------------------------------------------##
 
 The deferred recipe finally receives the real working frame inside
 ``_mutate_cols()``:
@@ -657,11 +655,11 @@ expr = d2.resolve(frame)
 The recipes unfold from the inside outward:
 ```
 frame.select("y")
-    -> _as_enum_resolved(frame.select("y"))
-        -> _as_enum_resolved(frame.select("y")).alias("y")
+    -> as_enum(frame.select("y"))
+        -> as_enum(frame.select("y")).alias("y")
 ```
 
-``_as_enum_resolved()`` inspects the one-column frame,
+``as_enum()`` inspects the one-column frame,
 determines its column name and categories, and returns approximately:
 ```
 pl.col("y")

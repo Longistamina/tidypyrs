@@ -29,12 +29,7 @@ from tidypyrs import col as c
 
 tf = tp.TibbleFrame(x=range(3), y=range(3, 6), z=["a", "a", "b"])
 
-(
-    tf.select("x", "y", "z")
-    .filter(col("x") < 4, c("y") > 1)
-    .arrange(desc("z"), "x")
-    .mutate(double_x=c("x") * 2, x_plus_y=c("x") + c("y"))
-)
+(tf.select("x", "y", "z").filter(col("x") < 4, c("y") > 1).arrange(desc("z"), "x").mutate(double_x=c("x") * 2, x_plus_y=c("x") + c("y")))
 ```
 
 ```

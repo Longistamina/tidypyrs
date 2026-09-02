@@ -19,6 +19,24 @@ def test_f_column_expression():
     assert actual.equals(expected)
 
 
+def test_f_getitem_call():
+    tl = tp.TibbleLazy(
+        x=[1, 2, 3],
+        y=[4, 5, 6],
+        z=[7, 8, 9],
+    )
+
+    expected = tp.TibbleLazy(
+        x=[1, 2, 3],
+        y=[4, 5, 6],
+    )
+
+    assert tf.select(f["x", "y"]).equals(expected)
+    assert tf.select(f[["x", "y"]]).equals(expected)
+    assert tf.select(f("x", "y")).equals(expected)
+    assert tf.select(f(["x", "y"])).equals(expected)
+
+
 def test_f_select():
     actual = tp.TibbleLazy(y=["b", "a", "b"]).mutate(y=tp.as_ordered(f.select("y")))
 

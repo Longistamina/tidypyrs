@@ -94,9 +94,7 @@ def _over_exprs(exprs, over):
 
 def _list_flatten(l):
     l = [x if isinstance(x, list) else [x] for x in l]  # create nested list
-    return list(
-        chain.from_iterable(l)
-    )  # [[1, 2, 3], [4], [5, 6]] -> [1, 2, 3, 4, 5, 6]
+    return list(chain.from_iterable(l))  # [[1, 2, 3], [4], [5, 6]] -> [1, 2, 3, 4, 5, 6]
 
 
 def _as_list(x):
@@ -107,9 +105,7 @@ def _as_list(x):
     if _is_series(x):
         return x.to_list()
     if isinstance(x, (list, tuple)):
-        return _list_flatten(
-            [value.to_list() if _is_series(value) else value for value in x]
-        )
+        return _list_flatten([value.to_list() if _is_series(value) else value for value in x])
     return [x]
 
 

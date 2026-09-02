@@ -33,9 +33,7 @@ def test_str_concat():
 def test_str_detect_single():
     """Can str_detect find a single string"""
     tl = tp.TibbleLazy(name=["apple", "banana", "pear", "grape"])
-    actual = tl.mutate(
-        x=tp.str_detect("name", "a"), y=tp.str_detect("name", "a", negate=True)
-    )
+    actual = tl.mutate(x=tp.str_detect("name", "a"), y=tp.str_detect("name", "a", negate=True))
     expected = tp.TibbleLazy(
         name=["apple", "banana", "pear", "grape"],
         x=[True, True, True, True],
@@ -71,9 +69,7 @@ def test_str_extract():
     """Can str_extract extract strings"""
     tl = tp.TibbleLazy(name=["apple", "banana", "pear", "grape"])
     actual = tl.mutate(x=tp.str_extract("name", "pp"))
-    expected = tp.TibbleLazy(
-        name=["apple", "banana", "pear", "grape"], x=["pp", None, None, None]
-    )
+    expected = tp.TibbleLazy(name=["apple", "banana", "pear", "grape"], x=["pp", None, None, None])
     assert actual.equals(expected), "str_extract failed"
 
 
@@ -89,9 +85,7 @@ def test_str_sub():
     """Can str_sub can extract strings"""
     tl = tp.TibbleLazy(name=["apple", "banana", "pear", "grape"])
     actual = tl.mutate(x=tp.str_sub("name", 0, 3))
-    expected = tp.TibbleLazy(
-        name=["apple", "banana", "pear", "grape"], x=["app", "ban", "pea", "gra"]
-    )
+    expected = tp.TibbleLazy(name=["apple", "banana", "pear", "grape"], x=["app", "ban", "pea", "gra"])
     assert actual.equals(expected), "str_sub failed"
 
 
@@ -171,7 +165,5 @@ def test_str_trim():
         left=tp.str_trim("x", "left"),
         right=tp.str_trim("x", "right"),
     ).drop("x")
-    expected = tp.TibbleLazy(
-        both=["a", "b", "c"], left=["a ", "b ", "c "], right=[" a", " b", " c"]
-    )
+    expected = tp.TibbleLazy(both=["a", "b", "c"], left=["a ", "b ", "c "], right=[" a", " b", " c"])
     assert actual.equals(expected), "str_trim failed"

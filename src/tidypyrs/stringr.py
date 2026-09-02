@@ -103,9 +103,7 @@ def str_paste(*args, sep=" "):
     >>> tf.mutate(x_end = tp.paste(tp.col('x'), 'end', sep = '_'))
     """
     args = _as_list(args)
-    args = [
-        pl.lit(arg) if not isinstance(arg, pl.Expr) else arg for arg in args
-    ]  # [pl.lit(arg), pl.lit(arg), pl.lit(arg), ...]
+    args = [pl.lit(arg) if not isinstance(arg, pl.Expr) else arg for arg in args]  # [pl.lit(arg), pl.lit(arg), pl.lit(arg), ...]
     curlies = ["{}"] * len(args)  # ['{}', '{}', '{}', '{}', ...]
     string_format = sep.join(curlies)  # "{}sep{}sep{}sep{}sep{}...{}"
     return pl.format(string_format, *args)  # "{arg}sep{arg}sep{arg}...{arg}"
@@ -172,9 +170,7 @@ def str_detect(string, pattern, negate=False):
 
     string = _col_expr(string)  # "col_name" -> pl.lit("col_name")
 
-    exprs = (
-        string.str.contains(p) for p in pattern
-    )  # lazy generator of (True, False, True, False, ...)
+    exprs = (string.str.contains(p) for p in pattern)  # lazy generator of (True, False, True, False, ...)
     exprs = ft.reduce(lambda a, b: a & b, exprs)  # True if all are True, else False
     if negate:
         exprs = exprs.not_()

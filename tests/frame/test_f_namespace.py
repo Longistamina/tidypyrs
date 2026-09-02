@@ -6,7 +6,6 @@ import numpy as np
 import polars as pl
 import tidypyrs as tp
 from tidypyrs import f
-from tidypyrs.tibble_frame import TibbleFrame
 
 
 def test_f_column_expression():
@@ -21,13 +20,13 @@ def test_f_column_expression():
 
 
 def test_f_getitem_call():
-    tf = TibbleFrame(
+    tf = tp.TibbleFrame(
         x=[1, 2, 3],
         y=[4, 5, 6],
         z=[7, 8, 9],
     )
 
-    expected = TibbleFrame(
+    expected = tp.TibbleFrame(
         x=[1, 2, 3],
         y=[4, 5, 6],
     )

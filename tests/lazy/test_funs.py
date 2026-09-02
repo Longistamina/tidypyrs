@@ -12,9 +12,7 @@ def test_abs():
     """Can get absolute value"""
     tl = tp.TibbleLazy(x=range(-3, 0))
     actual = tl.mutate(abs_x=tp.abs("x"), abs_col_x=tp.abs(c("x")))
-    expected = tp.TibbleLazy(
-        x=range(-3, 0), abs_x=range(3, 0, -1), abs_col_x=range(3, 0, -1)
-    )
+    expected = tp.TibbleLazy(x=range(-3, 0), abs_x=range(3, 0, -1), abs_col_x=range(3, 0, -1))
     assert actual.equals(expected), "abs failed"
 
 
@@ -80,9 +78,7 @@ def test_agg_stats():
 
 def test_as_factor():
     """Can use as_factor"""
-    tl = tp.TibbleLazy(x=range(0, 10, 2), y=["a", "b", "b", "c", "a"]).mutate(
-        y=tp.as_factor(c("y"))
-    )
+    tl = tp.TibbleLazy(x=range(0, 10, 2), y=["a", "b", "b", "c", "a"]).mutate(y=tp.as_factor(c("y")))
 
     assert tl.pull("y").dtype == tp.Categorical, "as_factor failed"
 
@@ -114,9 +110,7 @@ def test_case_when():
 
 def test_casting():
     """Can do type casting"""
-    tl = tp.TibbleLazy(
-        int_col=[0, 0, 1], float_col=[1.0, 2.0, 3.0], chr_col=["1", "2", "3"]
-    )
+    tl = tp.TibbleLazy(int_col=[0, 0, 1], float_col=[1.0, 2.0, 3.0], chr_col=["1", "2", "3"])
     actual = tl.mutate(
         float_cast=tp.as_float("int_col"),
         int_cast=tp.as_integer("float_col"),
@@ -135,9 +129,7 @@ def test_casting():
 def test_coalesce():
     """Can use coalesce"""
     tl = tp.TibbleLazy(x=[None, None, 1], y=[2, None, 2], z=[3, 3, 3])
-    actual = tl.mutate(coalesce_x=tp.coalesce(c("x"), c("y"), c("z"))).select(
-        "coalesce_x"
-    )
+    actual = tl.mutate(coalesce_x=tp.coalesce(c("x"), c("y"), c("z"))).select("coalesce_x")
     expected = tp.TibbleLazy(coalesce_x=[2, 3, 1])
     assert actual.equals(expected), "coalesce failed"
 
@@ -154,9 +146,7 @@ def test_lag():
     """Can get lagging values with function"""
     tl = tp.TibbleLazy({"x": range(3)})
     actual = tl.mutate(lag_null=tp.lag(c("x")), lag_default=tp.lag("x", default=1))
-    expected = tp.TibbleLazy(
-        {"x": range(3), "lag_null": [None, 0, 1], "lag_default": [1, 0, 1]}
-    )
+    expected = tp.TibbleLazy({"x": range(3), "lag_null": [None, 0, 1], "lag_default": [1, 0, 1]})
     assert actual.equals(expected, null_equal=True), "lag failed"
 
 
@@ -164,9 +154,7 @@ def test_lead():
     """Can get leading values with function"""
     tl = tp.TibbleLazy({"x": range(3)})
     actual = tl.mutate(lead_null=tp.lead(c("x")), lead_default=tp.lead("x", default=1))
-    expected = tp.TibbleLazy(
-        {"x": range(3), "lead_null": [1, 2, None], "lead_default": [1, 2, 1]}
-    )
+    expected = tp.TibbleLazy({"x": range(3), "lead_null": [1, 2, None], "lead_default": [1, 2, 1]})
     assert actual.equals(expected, null_equal=True), "lead failed"
 
 
@@ -220,9 +208,7 @@ def test_rep():
     assert tp.rep(1, 2).equals(tp.Series([1, 1])), "rep int failed"
     assert tp.rep("a", 2).equals(tp.Series(["a", "a"])), "rep str failed"
     assert tp.rep(True, 2).equals(tp.Series([True, True])), "rep bool failed"
-    assert tp.rep(tp.Series([0, 1]), 2).equals(tp.Series([0, 1, 0, 1])), (
-        "rep series failed"
-    )
+    assert tp.rep(tp.Series([0, 1]), 2).equals(tp.Series([0, 1, 0, 1])), "rep series failed"
 
 
 def test_replace_null():
@@ -244,9 +230,7 @@ def test_row_number():
 def test_row_number_group():
     """Can get row number by group"""
     tl = tp.TibbleLazy(x=["a", "a", "b"])
-    actual = tl.mutate(group_row_num=tp.row_number(), over="x").arrange(
-        "x", "group_row_num"
-    )
+    actual = tl.mutate(group_row_num=tp.row_number(), over="x").arrange("x", "group_row_num")
     expected = tp.TibbleLazy(x=["a", "a", "b"], group_row_num=[1, 2, 1])
     assert actual.equals(expected), "group row_number failed"
 
