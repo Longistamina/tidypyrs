@@ -12,7 +12,7 @@ from .utils import (
     _is_series,
     _str_to_lit,
 )
-from .f_namespace import _Deferred
+from .f_namespace import _defer_aware
 
 __all__ = [
     # General functions
@@ -138,6 +138,7 @@ def as_categorical(x):
     return x.cast(pl.String).cast(pl.Categorical)
 
 
+@_defer_aware
 def as_enum(x, categories=None, reverse=False):
     """
     Convert a column to a Polars Enum.
@@ -167,10 +168,6 @@ def as_enum(x, categories=None, reverse=False):
     Expr
         Expression casting `x` to Enum.
     """
-    if isinstance(x, _Deferred):  # x = f.select("col") = _Deferred(lambda frame: frame.select("col"))
-        return x.map(  # x.map(...) = _Deferred(lambda frame: as_enum(frame.select("col"), categories, reverse))
-            lambda selected: as_enum(selected, categories=categories, reverse=reverse)
-        )
 
     if categories is None:
         if isinstance(x, pl.DataFrame):

@@ -31,10 +31,10 @@ def test_f_getitem_call():
         y=[4, 5, 6],
     )
 
-    assert tf.select(f["x", "y"]).equals(expected)
-    assert tf.select(f[["x", "y"]]).equals(expected)
-    assert tf.select(f("x", "y")).equals(expected)
-    assert tf.select(f(["x", "y"])).equals(expected)
+    assert tl.select(f["x", "y"]).equals(expected)
+    assert tl.select(f[["x", "y"]]).equals(expected)
+    assert tl.select(f("x", "y")).equals(expected)
+    assert tl.select(f(["x", "y"])).equals(expected)
 
 
 def test_f_select():
