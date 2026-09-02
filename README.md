@@ -38,8 +38,10 @@ tf = tp.TibbleFrame(
     .select('x', 'y', 'z')
     .filter(col('x') < 4, c('y') > 1)
     .arrange(desc('z'), 'x')
-    .mutate(double_x = c('x') * 2,
-            x_plus_y = c('x') + c('y'))
+    .mutate(
+        double_x = c('x') * 2,
+        x_plus_y = c('x') + c('y')
+    )
 )
 ```
 
@@ -64,11 +66,11 @@ The key difference from R is that column names must be wrapped in `col()` in the
 
 The general idea - when doing calculations on a column you need to wrap it in `col()`. When doing simple column selections (like in `.select()`) you can pass the column names as strings.
 
-## Fast group-by syntax with ```over``` parameter
+## Fast group-by syntax with `over` parameter
 
-polars provides ```polars.Expr.over()``` to perform
-quick and short group-by operation without calling ```group_by().agg()```.
-Library tidypyrs supports the same idea with ```over``` parameter.
+polars provides `polars.Expr.over()` to perform
+quick and short group-by operation without calling `group_by().agg()`.
+Library tidypyrs supports the same idea with `over` parameter.
 
 * A single column can be passed with `over = 'z'`
 * Multiple columns can be passed with `over = ['y', 'z']`
@@ -138,7 +140,7 @@ tf.drop(tp.starts_with('x'), 'z')
 └─────┘
 ```
 
-## Support TibbleLazy as a translated version of polars.LazyFrame
+## Providing `TibbleLazy` as a translated version of `polars.LazyFrame`
 ```python
 tl = tp.TibbleLazy(
     group=["a", "a", "b"],
@@ -165,23 +167,44 @@ print(result.collect())
 └───────┴───────┴────────────┘
 ```
 
-Can call ```TibbleFrame.lazy()``` to convert it to TibbleLazy,
-and can call ```TibbleLazy.collect()``` to realize back to TibbleFrame.
+Can call `TibbleFrame.lazy()` to convert it to TibbleLazy,   
+and can call `TibbleLazy.collect()` to realize back to TibbleFrame.
 
-### "f" namespace for fast selecting and accessing columns
-tidypyrs provides a very convenient "f" namespace to allow fast selecting and accessing columns.
-This pushes ```polars.col()``` one step further from a mere column expression.
+### `f` namespace for fast selecting and accessing columns
+tidypyrs provides a very convenient `f` namespace to allow fast selecting and accessing columns.
+This pushes `polars.col()` one step further from a mere column expression.
 This feature is inspired by [datar](#https://github.com/pwwang/datar) library.
 ```python
 import tidypyrs as tp
 import polars as pl
 from tidypyrs import f
+import numpy as np
 
-tf = tp.TibbleFrame(
-    y=["b", "a", "b"]
-).mutate(y=tp.as_ordered(f.select("y"))) # No need to use .pipe(lambda f: f.mutate(y=tp.as_ordered(f.select("y"))))
+# ================================
+# Example with tp.as_ordered()
+# ================================
+
+tf = (
+    tp.TibbleFrame(y=["b", "a", "b"])
+    .mutate(
+        y = tp.as_ordered(f.select("y"))
+    )
+    # Don't need to call `.pipe(lambda f: f.mutate(y = tp.as_ordered(f.select("y"))))`
+)
 
 print(isinstance(tf.pull("y").dtype, pl.Enum)) # True
+
+# ================================
+# Example with numpy functions
+# ================================
+
+tf = (
+    tp.TibbleFrame(x=[1, 4, 9])
+    .mutate(
+        x_root = np.sqrt(f["x"]),
+        x_sin = np.sin(f.x)
+    )
+)
 ```
 
 ## Converting to/from pandas data frames

@@ -38,8 +38,8 @@ def str_length(string):
 
     Examples
     --------
-    >>> df = tp.Tibble(name = ['apple', 'banana', 'pear', 'grape'])
-    >>> df.mutate(x = str_length(tp.col('name')))
+    >>> tf = tp.TibbleFrame(name = ['apple', 'banana', 'pear', 'grape'])
+    >>> tf.mutate(x = str_length(tp.col('name')))
     """
     string = _col_expr(string)
     return string.str.len_bytes()
@@ -57,8 +57,8 @@ def str_to_lower(string):
 
     Examples
     --------
-    >>> df = tp.Tibble(name = ['apple', 'banana', 'pear', 'grape'])
-    >>> df.mutate(x = str_to_lower(tp.col('name')))
+    >>> tf = tp.TibbleFrame(name = ['apple', 'banana', 'pear', 'grape'])
+    >>> tf.mutate(x = str_to_lower(tp.col('name')))
     """
     string = _col_expr(string)
     return string.str.to_lowercase()
@@ -74,15 +74,15 @@ def str_to_upper(string):
 
     Examples
     --------
-    >>> df = tp.Tibble(name = ['apple', 'banana', 'pear', 'grape'])
-    >>> df.mutate(x = str_to_upper(tp.col('name')))
+    >>> tf = tp.TibbleFrame(name = ['apple', 'banana', 'pear', 'grape'])
+    >>> tf.mutate(x = str_to_upper(tp.col('name')))
     """
     string = _col_expr(string)
     return string.str.to_uppercase()
 
 ##------------------------------------##
 
-def str_paste(*args, sep = ' '):
+def str_paste(*args, sep=' '):
     """
     Concatenate strings together
 
@@ -93,8 +93,8 @@ def str_paste(*args, sep = ' '):
 
     Examples
     --------
-    >>> df = tp.Tibble(x = ['a', 'b', 'c'])
-    >>> df.mutate(x_end = tp.paste(tp.col('x'), 'end', sep = '_'))
+    >>> tf = tp.TibbleFrame(x = ['a', 'b', 'c'])
+    >>> tf.mutate(x_end = tp.paste(tp.col('x'), 'end', sep = '_'))
     """
     args = _as_list(args)
     args = [pl.lit(arg) if not isinstance(arg, pl.Expr) else arg for arg in args] # [pl.lit(arg), pl.lit(arg), pl.lit(arg), ...]
@@ -113,12 +113,12 @@ def str_paste0(*args):
 
     Examples
     --------
-    >>> df = tp.Tibble(x = ['a', 'b', 'c'])
-    >>> df.mutate(xend = tp.paste0(tp.col('x'), 'end'))
+    >>> tf = tp.TibbleFrame(x = ['a', 'b', 'c'])
+    >>> tf.mutate(xend = tp.paste0(tp.col('x'), 'end'))
     """
-    return str_paste(*args, sep = '')
+    return str_paste(*args, sep='')
 
-def str_concat(*args, sep = ''):
+def str_concat(*args, sep=''):
     """
     Concatenate strings together
 
@@ -129,14 +129,14 @@ def str_concat(*args, sep = ''):
 
     Examples
     --------
-    >>> df = tp.Tibble(x = ['a', 'b', 'c'])
-    >>> df.mutate(x_end = str_c(tp.col('x'), 'end', sep = '_'))
+    >>> tf = tp.TibbleFrame(x = ['a', 'b', 'c'])
+    >>> tf.mutate(x_end = str_c(tp.col('x'), 'end', sep = '_'))
     """
-    return str_paste(*args, sep = sep)
+    return str_paste(*args, sep=sep)
 
 ##------------------------------------##
 
-def str_detect(string, pattern, negate = False):
+def str_detect(string, pattern, negate=False):
     """
     Detect the presence or absence of a pattern in a string
 
@@ -151,9 +151,9 @@ def str_detect(string, pattern, negate = False):
 
     Examples
     --------
-    >>> df = tp.Tibble(name = ['apple', 'banana', 'pear', 'grape'])
-    >>> df.mutate(x = str_detect('name', 'a'))
-    >>> df.mutate(x = str_detect('name', ['a', 'e']))
+    >>> tf = tp.TibbleFrame(name = ['apple', 'banana', 'pear', 'grape'])
+    >>> tf.mutate(x = str_detect('name', 'a'))
+    >>> tf.mutate(x = str_detect('name', ['a', 'e']))
     """
     if isinstance(pattern, str): # "a" -> ["a"]
         pattern = [pattern]
@@ -167,7 +167,7 @@ def str_detect(string, pattern, negate = False):
 
     return exprs
 
-def str_starts(string, pattern, negate = False):
+def str_starts(string, pattern, negate=False):
     """
     Detect the presence or absence of a pattern at the beginning of a string.
 
@@ -182,13 +182,13 @@ def str_starts(string, pattern, negate = False):
 
     Examples
     --------
-    >>> df = tp.Tibble(words = ['apple', 'bear', 'amazing'])
-    >>> df.filter(tp.str_starts(tp.col('words'), 'a'))
+    >>> tf = tp.TibbleFrame(words = ['apple', 'bear', 'amazing'])
+    >>> tf.filter(tp.str_starts(tp.col('words'), 'a'))
     """
     pattern = "^" + pattern
     return str_detect(string, pattern, negate)
 
-def str_ends(string, pattern, negate = False):
+def str_ends(string, pattern, negate=False):
     """
     Detect the presence or absence of a pattern at the end of a string.
 
@@ -203,8 +203,8 @@ def str_ends(string, pattern, negate = False):
 
     Examples
     --------
-    >>> df = tp.Tibble(words = ['apple', 'bear', 'amazing'])
-    >>> df.filter(tp.str_ends(tp.col('words'), 'ing'))
+    >>> tf = tp.TibbleFrame(words = ['apple', 'bear', 'amazing'])
+    >>> tf.filter(tp.str_ends(tp.col('words'), 'ing'))
     """
     pattern = pattern + "$"
     return str_detect(string, pattern, negate)
@@ -226,8 +226,8 @@ def str_replace(string, pattern, replacement):
 
     Examples
     --------
-    >>> df = tp.Tibble(name = ['apple', 'banana', 'pear', 'grape'])
-    >>> df.mutate(x = str_replace(tp.col('name'), 'a', 'A'))
+    >>> tf = tp.TibbleFrame(name = ['apple', 'banana', 'pear', 'grape'])
+    >>> tf.mutate(x = str_replace(tp.col('name'), 'a', 'A'))
     """
     string = _col_expr(string)
     return string.str.replace(pattern, replacement)
@@ -247,15 +247,15 @@ def str_replace_all(string, pattern, replacement):
 
     Examples
     --------
-    >>> df = tp.Tibble(name = ['apple', 'banana', 'pear', 'grape'])
-    >>> df.mutate(x = str_replace_all(tp.col('name'), 'a', 'A'))
+    >>> tf = tp.TibbleFrame(name = ['apple', 'banana', 'pear', 'grape'])
+    >>> tf.mutate(x = str_replace_all(tp.col('name'), 'a', 'A'))
     """
     string = _col_expr(string)
     return string.str.replace_all(pattern, replacement)
 
 ##------------------------------------##
 
-def str_sub(string, start = 0, end = None):
+def str_sub(string, start=0, end=None):
     """
     Extract portion of string based on start and end indices
 
@@ -270,8 +270,8 @@ def str_sub(string, start = 0, end = None):
 
     Examples
     --------
-    >>> df = tp.Tibble(name = ['apple', 'banana', 'pear', 'grape'])
-    >>> df.mutate(x = str_sub(tp.col('name'), 0, 3))
+    >>> tf = tp.TibbleFrame(name = ['apple', 'banana', 'pear', 'grape'])
+    >>> tf.mutate(x = str_sub(tp.col('name'), 0, 3))
     """
     string = _col_expr(string)
     return string.str.slice(start, end)
@@ -289,8 +289,8 @@ def str_extract(string, pattern):
 
     Examples
     --------
-    >>> df = tp.Tibble(name = ['apple', 'banana', 'pear', 'grape'])
-    >>> df.mutate(x = str_extract(tp.col('name'), 'e'))
+    >>> tf = tp.TibbleFrame(name = ['apple', 'banana', 'pear', 'grape'])
+    >>> tf.mutate(x = str_extract(tp.col('name'), 'e'))
     """
     string = _col_expr(string)
     return string.str.extract(pattern, 0)
@@ -310,8 +310,8 @@ def str_remove(string, pattern):
 
     Examples
     --------
-    >>> df = tp.Tibble(name = ['apple', 'banana', 'pear', 'grape'])
-    >>> df.mutate(x = str_remove(col('name'), 'a'))
+    >>> tf = tp.TibbleFrame(name = ['apple', 'banana', 'pear', 'grape'])
+    >>> tf.mutate(x = str_remove(col('name'), 'a'))
     """
     return str_replace(string, pattern, "")
 
@@ -328,14 +328,14 @@ def str_remove_all(string, pattern):
 
     Examples
     --------
-    >>> df = tp.Tibble(name = ['apple', 'banana', 'pear', 'grape'])
-    >>> df.mutate(x = str_remove_all(col('name'), 'a'))
+    >>> tf = tp.TibbleFrame(name = ['apple', 'banana', 'pear', 'grape'])
+    >>> tf.mutate(x = str_remove_all(col('name'), 'a'))
     """
     return str_replace_all(string, pattern, "")
 
 ##------------------------------------##
 
-def str_trim(string, side = "both"):
+def str_trim(string, side="both"):
     """
     Trim whitespace
 
@@ -351,8 +351,8 @@ def str_trim(string, side = "both"):
 
     Examples
     --------
-    >>> df = tp.Tibble(x = [' a ', ' b ', ' c '])
-    >>> df.mutate(x = tp.str_trim(col('x')))
+    >>> tf = tp.TibbleFrame(x = [' a ', ' b ', ' c '])
+    >>> tf.mutate(x = tp.str_trim(col('x')))
     """
     string = _col_expr(string)
     if side == "both":

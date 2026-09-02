@@ -33,8 +33,8 @@ def starts_with(match, ignore_case=True):
 
     Examples
     --------
-    >>> df = tp.tibble({'a': range(3), 'add': range(3), 'sub': ['a', 'a', 'b']})
-    >>> df.select(tp.starts_with('a'))
+    >>> tf = tp.TibbleFrame{'a': range(3), 'add': range(3), 'sub': ['a', 'a', 'b']})
+    >>> tf.select(tp.starts_with('a'))
     """
     if ignore_case == True:
         out = cs.matches(f"^(?i){match}.*$")
@@ -42,7 +42,7 @@ def starts_with(match, ignore_case=True):
         out = cs.starts_with(match)
     return out
 
-def ends_with(match, ignore_case = True):
+def ends_with(match, ignore_case=True):
     """
     Ends with a suffix
 
@@ -56,8 +56,8 @@ def ends_with(match, ignore_case = True):
 
     Examples
     --------
-    >>> df = tp.tibble({'a': range(3), 'b_code': range(3), 'c_code': ['a', 'a', 'b']})
-    >>> df.select(tp.ends_with('code'))
+    >>> tf = tp.TibbleFrame{'a': range(3), 'b_code': range(3), 'c_code': ['a', 'a', 'b']})
+    >>> tf.select(tp.ends_with('code'))
     """
     if ignore_case == True:
         out = cs.matches(f"^.*(?i){match}$")
@@ -71,8 +71,8 @@ def everything():
 
     Examples
     --------
-    >>> df = tp.tibble({'a': range(3), 'b': range(3), 'c': ['a', 'a', 'b']})
-    >>> df.select(tp.everything())
+    >>> tf = tp.TibbleFrame{'a': range(3), 'b': range(3), 'c': ['a', 'a', 'b']})
+    >>> tf.select(tp.everything())
     """
     return cs.all()
 
@@ -100,7 +100,7 @@ def where(col_type):
 
     Examples
     --------
-    >>> df.select(tp.where("integer"))
+    >>> tf.select(tp.where("integer"))
     """
     out = _col_types[col_type]
     return out

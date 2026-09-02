@@ -53,7 +53,7 @@ __all__ = [
     "cast"
 ]
 
-def across(cols, fn = lambda x: x, names_prefix = None):
+def across(cols, fn=lambda x: x, names_prefix=None):
     """
     Apply a function across a selection of columns
 
@@ -68,10 +68,10 @@ def across(cols, fn = lambda x: x, names_prefix = None):
 
     Examples
     --------
-    >>> df = tp.tibble(x = ['a', 'a', 'b'], y = range(3), z = range(3))
-    >>> df.mutate(across(['y', 'z'], lambda x: x * 2))
-    >>> df.mutate(across(tp.Int64, lambda x: x * 2, names_prefix = "double_"))
-    >>> df.summarize(across(['y', 'z'], tp.mean))
+    >>> tf = tp.TibbleFrame(x = ['a', 'a', 'b'], y = range(3), z = range(3))
+    >>> tf.mutate(across(['y', 'z'], lambda x: x * 2))
+    >>> tf.mutate(across(tp.Int64, lambda x: x * 2, names_prefix = "double_"))
+    >>> tf.summarize(across(['y', 'z'], tp.mean))
     """
     _cols = _col_exprs(_as_list(cols))
     exprs = [fn(_col) for _col in _cols]
@@ -90,7 +90,7 @@ def as_boolean(x):
 
     Examples
     --------
-    >>> df.mutate(bool_x = tp.as_boolean(col('x')))
+    >>> tf.mutate(bool_x = tp.as_boolean(col('x')))
     """
     x = _col_expr(x)
     return x.cast(pl.Boolean)
@@ -106,7 +106,7 @@ def as_categorical(x):
 
     Examples
     --------
-    >>> df.mutate(categ_x = tp.as_categorical(col('x')))
+    >>> tf.mutate(categ_x = tp.as_categorical(col('x')))
     """
     x = _col_expr(x)
     return x.cast(pl.String).cast(pl.Categorical)
@@ -118,7 +118,7 @@ def as_enum(x, categories=None, reverse=False):
     Supply either:
 
     - `categories`: fixed Enum categories, or
-    - `x=df.select(x)`: a TibbleFrame/TibbleLazy from which categories are inferred.
+    - `x=tf.select(x)`: a TibbleFrame/TibbleLazy from which categories are inferred.
 
     Note: for TibbleLazy, should provide `x` as string and `categories`,
           otherwise the internal evaluation could be expensive
@@ -127,7 +127,7 @@ def as_enum(x, categories=None, reverse=False):
     ----------
     x : str, col_expr, TibbleFrame, TibbleLazy
         String or column expression,
-        or the output of selecting single column ``df.select("x")`` or ``lf.select("x")``
+        or the output of selecting single column ``tf.select("x")`` or ``tl.select("x")``
 
     categories : iterable of str, Series, optional
         Enum categories in their desired order.
@@ -158,7 +158,7 @@ def _as_enum_resolved(x, categories=None, reverse=False):
 
         else:
             raise ValueError(
-                "`categories` or output from `df.select('x')` must be provided"
+                "`categories` or output from `tf.select('x')` must be provided"
             )
 
     elif not isinstance(x, str):
@@ -184,7 +184,7 @@ def as_factor(x):
 
     Examples
     --------
-    >>> df.mutate(factor_x = tp.as_factor(col('x')))
+    >>> tf.mutate(factor_x = tp.as_factor(col('x')))
     """
     return as_categorical(x)
 
@@ -199,7 +199,7 @@ def as_float(x):
 
     Examples
     --------
-    >>> df.mutate(float_x = tp.as_float(col('x')))
+    >>> tf.mutate(float_x = tp.as_float(col('x')))
     """
     x = _col_expr(x)
     return x.cast(pl.Float64)
@@ -215,7 +215,7 @@ def as_integer(x):
 
     Examples
     --------
-    >>> df.mutate(int_x = tp.as_integer(col('x')))
+    >>> tf.mutate(int_x = tp.as_integer(col('x')))
     """
     x = _col_expr(x)
     return x.cast(pl.Int64)
@@ -229,7 +229,7 @@ def as_ordered(x, categories=None, reverse=False):
     Supply either:
 
     - `categories`: fixed Enum categories, or
-    - `x=df.select(x)`: a TibbleFrame/TibbleLazy from which categories are inferred.
+    - `x=tf.select(x)`: a TibbleFrame/TibbleLazy from which categories are inferred.
 
     Note: for TibbleLazy, should provide `x` as string and `categories`,
           otherwise the internal evaluation could be expensive
@@ -237,7 +237,7 @@ def as_ordered(x, categories=None, reverse=False):
     Parameters
     ----------
     x : TibbleFrame, TibbleLazy
-        The output of selecting single column ``df.select("x")`` or ``lf.select("x")``
+        The output of selecting single column ``tf.select("x")`` or ``tl.select("x")``
 
     categories : iterable of str, Series, optional
         Enum categories in their desired order.
@@ -263,7 +263,7 @@ def as_string(x):
 
     Examples
     --------
-    >>> df.mutate(string_x = tp.as_string(col('x')))
+    >>> tf.mutate(string_x = tp.as_string(col('x')))
     """
     x = _col_expr(x)
     return x.cast(pl.Utf8)
@@ -279,8 +279,8 @@ def abs(x):
 
     Examples
     --------
-    >>> df.mutate(abs_x = tp.abs('x'))
-    >>> df.mutate(abs_x = tp.abs(col('x')))
+    >>> tf.mutate(abs_x = tp.abs('x'))
+    >>> tf.mutate(abs_x = tp.abs(col('x')))
     """
     x = _col_expr(x)
     return x.abs()
@@ -300,13 +300,13 @@ def between(x, left, right):
 
     Examples
     --------
-    >>> df = tp.tibble(x = range(4))
-    >>> df.filter(tp.between(col('x'), 1, 3))
+    >>> tf = tp.TibbleFrame(x = range(4))
+    >>> tf.filter(tp.between(col('x'), 1, 3))
     """
     x = _col_expr(x)
     return x.is_between(left, right)
 
-def case_when(*args, _default = pl.Null):
+def case_when(*args, _default=pl.Null):
     """
     Case when
 
@@ -317,11 +317,13 @@ def case_when(*args, _default = pl.Null):
 
     Examples
     --------
-    >>> df = tp.tibble(x = range(1, 4))
-    >>> df.mutate(
-    >>>    case_x = tp.case_when(col('x') < 2, 1,
-    >>>                          col('x') < 3, 2,
-    >>>                          _default = 0)
+    >>> tf = tp.TibbleFrame(x = range(1, 4))
+    >>> tf.mutate(
+    >>>    case_x = tp.case_when(
+    ...         col('x') < 2, 1,
+    ...         col('x') < 3, 2,
+    ...         _default = 0
+    >>>    )
     >>> )
     """
     conditions = [args[i] for i in range(0, len(args), 2)]
@@ -349,7 +351,7 @@ def cast(x, dtype):
 
     Examples
     --------
-    >>> df.mutate(float_x = tp.cast(col('x'), tp.Float64))
+    >>> tf.mutate(float_x = tp.cast(col('x'), tp.Float64))
     """
 
     if isinstance(dtype, pl.Enum):
@@ -369,7 +371,7 @@ def coalesce(*args):
 
     Examples
     --------
-    >>> df.mutate(coalesce_xy = tp.coalesce(col('x'), col('y')))
+    >>> tf.mutate(coalesce_xy = tp.coalesce(col('x'), col('y')))
     """
     args = _as_list(args)
     expr = if_else(args[0].is_null(), args[1], args[0])
@@ -379,7 +381,7 @@ def coalesce(*args):
             expr = if_else(expr.is_null(), args[i], expr)
     return expr
 
-def cor(x, y, method = 'pearson'):
+def cor(x, y, method='pearson'):
     """
     Find the correlation of two columns
 
@@ -394,11 +396,11 @@ def cor(x, y, method = 'pearson'):
 
     Examples
     --------
-    >>> df.summarize(cor = tp.cor(col('x'), col('y')))
+    >>> tf.summarize(cor = tp.cor(col('x'), col('y')))
     """
     if pl.Series([method]).is_in(['pearson', 'spearman']).not_().item():
-        ValueError("`method` must be either 'pearson' or 'spearman'")
-    return pl.corr(x, y, method = method)
+        raise ValueError("`method` must be either 'pearson' or 'spearman'")
+    return pl.corr(x, y, method=method)
 
 def cov(x, y):
     """
@@ -413,7 +415,7 @@ def cov(x, y):
 
     Examples
     --------
-    >>> df.summarize(cov = tp.cov(col('x'), col('y')))
+    >>> tf.summarize(cov = tp.cov(col('x'), col('y')))
     """
     return pl.cov(x, y)
 
@@ -428,7 +430,7 @@ def count(x):
 
     Examples
     --------
-    >>> df.summarize(count = tp.count(col('x')))
+    >>> tf.summarize(count = tp.count(col('x')))
     """
     x = _col_expr(x)
     return x.count()
@@ -454,8 +456,8 @@ def first(x):
 
     Examples
     --------
-    >>> df.summarize(first_x = tp.first('x'))
-    >>> df.summarize(first_x = tp.first(col('x')))
+    >>> tf.summarize(first_x = tp.first('x'))
+    >>> tf.summarize(first_x = tp.first(col('x')))
     """
     x = _col_expr(x)
     return x.first()
@@ -491,7 +493,7 @@ def floor(x):
 
     Examples
     --------
-    >>> df.mutate(floor_x = tp.floor(col('x')))
+    >>> tf.mutate(floor_x = tp.floor(col('x')))
     """
     x = _col_expr(x)
     return x.floor()
@@ -540,8 +542,8 @@ def if_else(condition, true, false):
 
     Examples
     --------
-    >>> df = tp.tibble(x = range(1, 4))
-    >>> df.mutate(if_x = tp.if_else(col('x') < 2, 1, 2))
+    >>> tf = tp.TibbleFrame(x = range(1, 4))
+    >>> tf.mutate(if_x = tp.if_else(col('x') < 2, 1, 2))
     """
     return case_when(condition, true, _default = false)
 
@@ -556,8 +558,8 @@ def is_finite(x):
 
     Examples
     --------
-    >>> df = tp.tibble(x = [1.0, float('inf')])
-    >>> df.filter(tp.is_finite(col('x')))
+    >>> tf = tp.TibbleFrame(x = [1.0, float('inf')])
+    >>> tf.filter(tp.is_finite(col('x')))
     """
     x = _col_expr(x)
     return x.is_finite()
@@ -575,8 +577,8 @@ def is_in(x, y):
 
     Examples
     --------
-    >>> df = tp.tibble(x = range(3))
-    >>> df.filter(tp.is_in(col('x'), [1, 2]))
+    >>> tf = tp.TibbleFrame(x = range(3))
+    >>> tf.filter(tp.is_in(col('x'), [1, 2]))
     """
     x = _col_expr(x)
     return x.is_in(y)
@@ -592,8 +594,8 @@ def is_infinite(x):
 
     Examples
     --------
-    >>> df = tp.tibble(x = [1.0, float('inf')])
-    >>> df.filter(tp.is_infinite(col('x')))
+    >>> tf = tp.TibbleFrame(x = [1.0, float('inf')])
+    >>> tf.filter(tp.is_infinite(col('x')))
     """
     x = _col_expr(x)
     return x.is_infinite()
@@ -609,8 +611,8 @@ def is_not(x):
 
     Examples
     --------
-    >>> df = tp.tibble(x = range(3))
-    >>> df.filter(tp.is_not(col('x') < 2))
+    >>> tf = tp.TibbleFrame(x = range(3))
+    >>> tf.filter(tp.is_not(col('x') < 2))
     """
     x = _col_expr(x)
     return x.not_()
@@ -626,8 +628,8 @@ def is_nan(x):
 
     Examples
     --------
-    >>> df = tp.tibble(x = range(3))
-    >>> df.filter(tp.is_nan(col('x')))
+    >>> tf = tp.TibbleFrame(x = range(3))
+    >>> tf.filter(tp.is_nan(col('x')))
     """
     x = _col_expr(x)
     return x.is_nan()
@@ -645,8 +647,8 @@ def is_not_in(x, y):
 
     Examples
     --------
-    >>> df = tp.tibble(x = range(3))
-    >>> df.filter(tp.is_not_in(col('x'), [1, 2]))
+    >>> tf = tp.TibbleFrame(x = range(3))
+    >>> tf.filter(tp.is_not_in(col('x'), [1, 2]))
     """
     x = _col_expr(x)
     return x.is_in(y).not_()
@@ -662,8 +664,8 @@ def is_not_null(x):
 
     Examples
     --------
-    >>> df = tp.tibble(x = range(3))
-    >>> df.filter(tp.is_not_null(col('x'), [1, 2]))
+    >>> tf = tp.TibbleFrame(x = range(3))
+    >>> tf.filter(tp.is_not_null(col('x'), [1, 2]))
     """
     x = _col_expr(x)
     return x.is_null().not_()
@@ -679,13 +681,13 @@ def is_null(x):
 
     Examples
     --------
-    >>> df = tp.tibble(x = range(3))
-    >>> df.filter(tp.is_null(col('x')))
+    >>> tf = tp.TibbleFrame(x = range(3))
+    >>> tf.filter(tp.is_null(col('x')))
     """
     x = _col_expr(x)
     return x.is_null()
 
-def lag(x, n: int = 1, default = None):
+def lag(x, n: int = 1, default=None):
     """
     Get lagging values
 
@@ -702,8 +704,8 @@ def lag(x, n: int = 1, default = None):
 
     Examples
     --------
-    >>> df.mutate(lag_x = tp.lag(col('x')))
-    >>> df.mutate(lag_x = tp.lag('x'))
+    >>> tf.mutate(lag_x = tp.lag(col('x')))
+    >>> tf.mutate(lag_x = tp.lag('x'))
     """
     x = _col_expr(x)
     return x.shift(n, fill_value = default)
@@ -719,13 +721,13 @@ def last(x):
 
     Examples
     --------
-    >>> df.summarize(last_x = tp.last('x'))
-    >>> df.summarize(last_x = tp.last(col('x')))
+    >>> tf.summarize(last_x = tp.last('x'))
+    >>> tf.summarize(last_x = tp.last(col('x')))
     """
     x = _col_expr(x)
     return x.last()
 
-def lead(x, n: int = 1, default = None):
+def lead(x, n: int = 1, default=None):
     """
     Get leading values
 
@@ -742,8 +744,8 @@ def lead(x, n: int = 1, default = None):
 
     Examples
     --------
-    >>> df.mutate(lead_x = tp.lead(col('x')))
-    >>> df.mutate(lead_x = col('x').lead())
+    >>> tf.mutate(lead_x = tp.lead(col('x')))
+    >>> tf.mutate(lead_x = col('x').lead())
     """
     x = _col_expr(x)
     return x.shift(-n, fill_value = default)
@@ -759,7 +761,7 @@ def length(x):
 
     Examples
     --------
-    >>> df.summarize(length = tp.length(col('x')))
+    >>> tf.summarize(length = tp.length(col('x')))
     """
     x = _col_expr(x)
     return x.count()
@@ -775,7 +777,7 @@ def log(x):
 
     Examples
     --------
-    >>> df.mutate(log = tp.log('x'))
+    >>> tf.mutate(log = tp.log('x'))
     """
     x = _col_expr(x)
     return x.log()
@@ -791,7 +793,7 @@ def log10(x):
 
     Examples
     --------
-    >>> df.mutate(log = tp.log10('x'))
+    >>> tf.mutate(log = tp.log10('x'))
     """
     x = _col_expr(x)
     return x.log10()
@@ -807,8 +809,8 @@ def max(x):
 
     Examples
     --------
-    >>> df.summarize(max_x = tp.max('x'))
-    >>> df.summarize(max_x = tp.max(col('x')))
+    >>> tf.summarize(max_x = tp.max('x'))
+    >>> tf.summarize(max_x = tp.max(col('x')))
     """
     x = _col_expr(x)
     return x.max()
@@ -824,8 +826,8 @@ def mean(x):
 
     Examples
     --------
-    >>> df.summarize(mean_x = tp.mean('x'))
-    >>> df.summarize(mean_x = tp.mean(col('x')))
+    >>> tf.summarize(mean_x = tp.mean('x'))
+    >>> tf.summarize(mean_x = tp.mean(col('x')))
     """
     x = _col_expr(x)
     return x.mean()
@@ -841,8 +843,8 @@ def median(x):
 
     Examples
     --------
-    >>> df.summarize(median_x = tp.median('x'))
-    >>> df.summarize(median_x = tp.median(col('x')))
+    >>> tf.summarize(median_x = tp.median('x'))
+    >>> tf.summarize(median_x = tp.median(col('x')))
     """
     x = _col_expr(x)
     return x.median()
@@ -858,8 +860,8 @@ def min(x):
 
     Examples
     --------
-    >>> df.summarize(min_x = tp.min('x'))
-    >>> df.summarize(min_x = tp.min(col('x')))
+    >>> tf.summarize(min_x = tp.min('x'))
+    >>> tf.summarize(min_x = tp.min(col('x')))
     """
     x = _col_expr(x)
     return x.min()
@@ -870,7 +872,7 @@ def n():
 
     Examples
     --------
-    >>> df.summarize(count = tp.n())
+    >>> tf.summarize(count = tp.n())
     """
     return pl.len()
 
@@ -885,8 +887,8 @@ def n_distinct(x):
 
     Examples
     --------
-    >>> df.summarize(min_x = tp.n_distinct('x'))
-    >>> df.summarize(min_x = tp.n_distinct(col('x')))
+    >>> tf.summarize(min_x = tp.n_distinct('x'))
+    >>> tf.summarize(min_x = tp.n_distinct(col('x')))
     """
     x = _col_expr(x)
     return x.n_unique()
@@ -905,7 +907,7 @@ def quantile(x, quantile=0.5):
 
     Examples
     --------
-    >>> df.summarize(quantile_x = tp.quantile('x', .25))
+    >>> tf.summarize(quantile_x = tp.quantile('x', .25))
     """
     x = _col_expr(x)
     return x.quantile(quantile)
@@ -945,7 +947,7 @@ def rep(x, times=1):
     elif _is_iterable(x):
         out = list(x)
     else:
-        ValueError("Incompatible type")
+        raise ValueError("Incompatible type")
     if _is_list(out):
         out = pl.Series(out * times)
     return out
@@ -961,13 +963,13 @@ def replace_null(x, replace = None):
 
     Examples
     --------
-    >>> df = tp.tibble(x = [0, None], y = [None, None])
-    >>> df.mutate(x = tp.replace_null(col('x'), 1))
+    >>> tf = tp.TibbleFrame(x = [0, None], y = [None, None])
+    >>> tf.mutate(x = tp.replace_null(col('x'), 1))
     """
-    if replace == None: return x
+    if replace is None: return x
     return x.fill_null(replace)
 
-def round(x, decimals = 0):
+def round(x, decimals=0):
     """
     Get column standard deviation
 
@@ -980,7 +982,7 @@ def round(x, decimals = 0):
 
     Examples
     --------
-    >>> df.mutate(x = tp.round(col('x')))
+    >>> tf.mutate(x = tp.round(col('x')))
     """
     x = _col_expr(x)
     return x.round(decimals)
@@ -991,7 +993,7 @@ def row_number():
 
     Examples
     --------
-    >>> df.mutate(row_num = tp.row_number())
+    >>> tf.mutate(row_num = tp.row_number())
     """
     return pl.int_range(0, pl.len()) + 1
 
@@ -1006,8 +1008,8 @@ def sd(x):
 
     Examples
     --------
-    >>> df.summarize(sd_x = tp.sd('x'))
-    >>> df.summarize(sd_x = tp.sd(col('x')))
+    >>> tf.summarize(sd_x = tp.sd('x'))
+    >>> tf.summarize(sd_x = tp.sd(col('x')))
     """
     x = _col_expr(x)
     return x.std()
@@ -1023,7 +1025,7 @@ def sqrt(x):
 
     Examples
     --------
-    >>> df.mutate(sqrt_x = tp.sqrt('x'))
+    >>> tf.mutate(sqrt_x = tp.sqrt('x'))
     """
     x = _col_expr(x)
     return x.sqrt()
@@ -1039,8 +1041,8 @@ def sum(x):
 
     Examples
     --------
-    >>> df.summarize(sum_x = tp.sum('x'))
-    >>> df.summarize(sum_x = tp.sum(col('x')))
+    >>> tf.summarize(sum_x = tp.sum('x'))
+    >>> tf.summarize(sum_x = tp.sum(col('x')))
     """
     x = _col_expr(x)
     return x.sum()
@@ -1056,8 +1058,8 @@ def var(x):
 
     Examples
     --------
-    >>> df.summarize(sum_x = tp.var('x'))
-    >>> df.summarize(sum_x = tp.var(col('x')))
+    >>> tf.summarize(sum_x = tp.var('x'))
+    >>> tf.summarize(sum_x = tp.var(col('x')))
     """
     x = _col_expr(x)
     return x.var()

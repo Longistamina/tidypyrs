@@ -1,9 +1,4 @@
 import polars as pl
-from polars._utils.parse import (
-    parse_into_expression,
-    parse_into_list_of_expressions,
-)
-from polars._utils.convert import parse_as_duration_string
 from datetime import timedelta
 import functools as ft
 
@@ -34,7 +29,7 @@ class TibbleLazy(pl.LazyFrame):
     """
     A lazy data frame object that provides methods familiar to R tidyverse users.
     """
-    def __init__(self, _data = None, **kwargs):
+    def __init__(self, _data=None, **kwargs):
         if len(kwargs) > 0:
             _data = kwargs
         elif not_(isinstance(_data, dict)):
@@ -58,8 +53,8 @@ class TibbleLazy(pl.LazyFrame):
 
     def __repr__(self):
         """Printing method"""
-        lf = self.as_polars()
-        return lf.__str__()
+        tl = self.as_polars()
+        return tl.__str__()
 
     def _repr_html_(self):
         """
@@ -71,8 +66,8 @@ class TibbleLazy(pl.LazyFrame):
 
         * POLARS_FMT_MAX_ROWS: set the number of rows
         """
-        lf = self.as_polars()
-        return lf._repr_html_()
+        tl = self.as_polars()
+        return tl._repr_html_()
 
     def __copy__(self):
         # Shallow copy
@@ -83,8 +78,8 @@ class TibbleLazy(pl.LazyFrame):
 
     def __str__(self):
         """Printing method"""
-        lf = self.as_polars()
-        return lf.__str__()
+        tl = self.as_polars()
+        return tl.__str__()
 
     def __getattribute__(self, attr):
         if attr in _polars_methods:
@@ -111,8 +106,8 @@ class TibbleLazy(pl.LazyFrame):
         """
         from .funs import DescCol
         exprs = _as_list(args)
-        desc = [True if isinstance(expr, DescCol) else False for expr in exprs]
-        return super().sort(exprs, descending = desc).pipe(_from_polars_lazy)
+        desc = [bool(isinstance(expr, DescCol)) for expr in exprs]
+        return super().sort(exprs, descending=desc).pipe(_from_polars_lazy)
 
     def as_polars(self):
         """
@@ -132,14 +127,14 @@ class TibbleLazy(pl.LazyFrame):
 
         Parameters
         ----------
-        lf : tibble
+        tl : tibble
             Data frame to bind
 
         Examples
         --------
         >>> tl1 = tp.TibbleLazy({'x': ['a', 'a', 'b'], 'y': range(3)})
         >>> tl2 = tp.TibbleLazy({'a': ['c', 'c', 'c'], 'b': range(4, 7)})
-        >>> tl1.bind_cols(lf2)
+        >>> tl1.bind_cols(tl2)
         """
         frames = _as_list(args)
         out = self.as_polars()
@@ -160,10 +155,10 @@ class TibbleLazy(pl.LazyFrame):
         --------
         >>> tl1 = tp.TibbleLazy({'x': ['a', 'a', 'b'], 'y': range(3)})
         >>> tl2 = tp.TibbleLazy({'x': ['c', 'c', 'c'], 'y': range(4, 7)})
-        >>> tl1.bind_rows(lf2)
+        >>> tl1.bind_rows(tl2)
         """
         frames = _as_list(args)
-        out = pl.concat([self, *frames], how = "diagonal")
+        out = pl.concat([self, *frames], how="diagonal")
         return out.pipe(_from_polars_lazy)
 
     def clone(self):
@@ -175,7 +170,7 @@ class TibbleLazy(pl.LazyFrame):
         from tidypyrs.tibble_frame import _from_polars_frame
         return super().collect(engine=engine).pipe(_from_polars_frame)
 
-    def count(self, *args, sort = False, name = 'n'):
+    def count(self, *args, sort=False, name='n'):
         """
         Returns row counts of the dataset.
         If bare column names are provided, count() returns counts by group.
@@ -222,10 +217,10 @@ class TibbleLazy(pl.LazyFrame):
         """
         args = _as_list(args)
         if len(args) == 0:
-            lf = super().unique()
+            tl = super().unique()
         else:
-            lf = super().select(args).unique()
-        return lf.pipe(_from_polars_lazy)
+            tl = super().select(args).unique()
+        return tl.pipe(_from_polars_lazy)
 
     def drop(self, *args, strict=True):
         """
@@ -270,9 +265,9 @@ class TibbleLazy(pl.LazyFrame):
         Check if two TibbleLazy are equal
         Note: this requires calling `collect()` to realize the TibbleFrame
         """
-        lf = self.as_polars().collect()
+        tl = self.as_polars().collect()
         other = other.as_polars().collect()
-        return lf.equals(other, null_equal=null_equal)
+        return tl.equals(other, null_equal=null_equal)
 
     def glimpse(self):
         """
@@ -283,7 +278,7 @@ class TibbleLazy(pl.LazyFrame):
         """
         return self.as_polars().glimpse()
 
-    def group_by(self, *by, maintain_order: bool = False, **named_by) -> TibbleLazyGroupBy:
+    def group_by(self, *by, maintain_order: bool=False, **named_by) -> TibbleLazyGroupBy:
         """
         Start a group by operation.
 
@@ -326,10 +321,10 @@ class TibbleLazy(pl.LazyFrame):
         period: str | timedelta | None = None,
         offset: str | timedelta | None = None,
         include_boundaries: bool = False,
-        closed = "left",
-        label = "left",
-        group_by = None,
-        start_by = "window"
+        closed="left",
+        label="left",
+        group_by=None,
+        start_by="window"
     ) -> TibbleLazyGroupBy:
         """
         Group based on a time value (or index value of type Int32, Int64).
@@ -440,9 +435,11 @@ class TibbleLazy(pl.LazyFrame):
 
         Examples
         --------
-        >>> tl = tp.TibbleLazy({'a': [1, None, 3, 4, 5],
-        ...                 'b': [None, 2, None, None, 5],
-        ...                 'groups': ['a', 'a', 'a', 'b', 'b']})
+        >>> tl = tp.TibbleLazy({
+        ...     'a': [1, None, 3, 4, 5],
+        ...     'b': [None, 2, None, None, 5],
+        ...     'groups': ['a', 'a', 'a', 'b', 'b']
+        ... })
         >>> tl.fill('a', 'b')
         >>> tl.fill('a', 'b', over='groups')
         >>> tl.fill('a', 'b', over='groups')
@@ -497,13 +494,13 @@ class TibbleLazy(pl.LazyFrame):
         out = super().filter(predicate)
         return out.pipe(_from_polars_lazy)
 
-    def full_join(self, lf, left_on = None, right_on = None, on = None, suffix: str = '_right'):
+    def full_join(self, tl, left_on=None, right_on=None, on=None, suffix: str='_right'):
         """
         Perform an full join
 
         Parameters
         ----------
-        lf : tibble
+        tl : tibble
             Lazy DataFrame to join with.
         left_on : str, list
             Join column(s) of the left DataFrame.
@@ -516,26 +513,26 @@ class TibbleLazy(pl.LazyFrame):
 
         Examples
         --------
-        >>> tl1.full_join(lf2)
-        >>> tl1.full_join(lf2, on = 'x')
-        >>> tl1.full_join(lf2, left_on = 'left_x', right_on = 'x')
+        >>> tl1.full_join(tl2)
+        >>> tl1.full_join(tl2, on = 'x')
+        >>> tl1.full_join(tl2, left_on='left_x', right_on='x')
         """
-        if (left_on == None) & (right_on == None) & (on == None):
-            on = list(set(self.names) & set(lf.names))
-        out = super().join(lf, on, "full", left_on = left_on, right_on = right_on, suffix = suffix, coalesce = True)
+        if (left_on is None) & (right_on is None) & (on is None):
+            on = list(set(self.colnames) & set(tl.colnames))
+        out = super().join(tl, on, "full", left_on=left_on, right_on=right_on, suffix=suffix, coalesce=True)
         return out.pipe(_from_polars_lazy)
 
     def head(self, n=5, *, over=None):
         """Alias for `.slice_head()`"""
         return self.slice_head(n, over=over).pipe(_from_polars_lazy)
 
-    def inner_join(self, lf, left_on = None, right_on = None, on = None, suffix = '_right'):
+    def inner_join(self, tl, left_on=None, right_on=None, on=None, suffix='_right'):
         """
         Perform an inner join
 
         Parameters
         ----------
-        lf : tibble
+        tl : tibble
             Lazy DataFrame to join with.
         left_on : str, list
             Join column(s) of the left DataFrame.
@@ -548,21 +545,21 @@ class TibbleLazy(pl.LazyFrame):
 
         Examples
         --------
-        >>> tl1.inner_join(lf2)
-        >>> tl1.inner_join(lf2, on = 'x')
-        >>> tl1.inner_join(lf2, left_on = 'left_x', right_on = 'x')
+        >>> tl1.inner_join(tl2)
+        >>> tl1.inner_join(tl2, on='x')
+        >>> tl1.inner_join(tl2, left_on='left_x', right_on='x')
         """
-        if (left_on == None) & (right_on == None) & (on == None):
-            on = list(set(self.names) & set(lf.names))
-        return super().join(lf, on, 'inner', left_on = left_on, right_on= right_on, suffix= suffix).pipe(_from_polars_lazy)
+        if (left_on is None) & (right_on is None) & (on is None):
+            on=list(set(self.colnames) & set(tl.colnames))
+        return super().join(tl, on, 'inner', left_on=left_on, right_on=right_on, suffix=suffix).pipe(_from_polars_lazy)
 
-    def left_join(self, lf, left_on = None, right_on = None, on = None, suffix = '_right'):
+    def left_join(self, tl, left_on=None, right_on=None, on=None, suffix='_right'):
         """
         Perform a left join
 
         Parameters
         ----------
-        lf : tibble
+        tl : tibble
             Lazy DataFrame to join with.
         left_on : str, list
             Join column(s) of the left DataFrame.
@@ -575,13 +572,13 @@ class TibbleLazy(pl.LazyFrame):
 
         Examples
         --------
-        >>> tl1.left_join(lf2)
-        >>> tl1.left_join(lf2, on = 'x')
-        >>> tl1.left_join(lf2, left_on = 'left_x', right_on = 'x')
+        >>> tl1.left_join(tl2)
+        >>> tl1.left_join(tl2, on='x')
+        >>> tl1.left_join(tl2, left_on='left_x', right_on='x')
         """
-        if (left_on == None) & (right_on == None) & (on == None):
-            on = list(set(self.names) & set(lf.names))
-        return super().join(lf, on, 'left',  left_on = left_on, right_on= right_on, suffix= suffix).pipe(_from_polars_lazy)
+        if (left_on is None) & (right_on is None) & (on is None):
+            on = list(set(self.colnames) & set(tl.colnames))
+        return super().join(tl, on, 'left',  left_on=left_on, right_on=right_on, suffix=suffix).pipe(_from_polars_lazy)
 
     def mutate(self, *args, over=None, **kwargs):
         """
@@ -599,8 +596,10 @@ class TibbleLazy(pl.LazyFrame):
         Examples
         --------
         >>> tl = tp.TibbleLazy({'a': range(3), 'b': range(3), c=['a', 'a', 'b']})
-        >>> tl.mutate(double_a = col('a') * 2,
-        ...           a_plus_b = col('a') + col('b'))
+        >>> tl.mutate(
+        ...     double_a = col('a') * 2,
+        ...     a_plus_b = col('a') + col('b')
+        ... )
         >>> tl.mutate(row_num = row_number(), over='c')
         """
         exprs = _as_list(args) + _kwargs_as_exprs(kwargs)
@@ -609,7 +608,7 @@ class TibbleLazy(pl.LazyFrame):
         out = _mutate_cols(self.as_polars(), exprs)
         return out.pipe(_from_polars_lazy)
 
-    def pivot_longer(self, cols=everything(), names_to="name", values_to="value"):
+    def pivot_longer(self, cols=None, names_to="name", values_to="value"):
         """
         Pivot data from wide to long
 
@@ -625,13 +624,15 @@ class TibbleLazy(pl.LazyFrame):
         Examples
         --------
         >>> tl = tp.TibbleLazy({'id': ['id1', 'id2'], 'a': [1, 2], 'b': [1, 2]})
-        >>> tl.pivot_longer(cols = ['a', 'b'])
-        >>> tl.pivot_longer(cols = ['a', 'b'], names_to = 'stuff', values_to = 'things')
+        >>> tl.pivot_longer(cols=['a', 'b'])
+        >>> tl.pivot_longer(cols=['a', 'b'], names_to='stuff', values_to='things')
         """
-        lf_cols = pl.Series(self.names)
-        value_vars = self.select(cols).names
-        id_vars = lf_cols.filter(lf_cols.is_in(value_vars).not_()).to_list()
-        out = super().unpivot(index = id_vars, on = value_vars, variable_name = names_to, value_name = values_to)
+        if cols is None:
+            cols = everything()
+        tl_cols = pl.Series(self.colnames)
+        value_vars = self.select(cols).colnames
+        id_vars = tl_cols.filter(tl_cols.is_in(value_vars).not_()).to_list()
+        out = super().unpivot(index=id_vars, on=value_vars, variable_name=names_to, value_name=values_to)
         return out.pipe(_from_polars_lazy)
 
     def pivot_wider(self, names_from='name', names_list=None, values_from='value', id_cols=None, values_fn='first', values_fill=None):
@@ -661,12 +662,12 @@ class TibbleLazy(pl.LazyFrame):
         Examples
         --------
         >>> tl = tp.TibbleLazy({'id': [1, 1], 'variable': ['a', 'b'], 'value': [1, 2]})
-        >>> tl.pivot_wider(names_from = 'variable', values_from = 'value')
+        >>> tl.pivot_wider(names_from='variable', values_from='value')
         """
-        if id_cols == None:
-            lf_cols = pl.Series(self.names)
-            from_cols = pl.Series(self.select(names_from, values_from).names)
-            id_cols = lf_cols.filter(lf_cols.is_in(from_cols).not_()).to_list()
+        if id_cols is None:
+            tl_cols = pl.Series(self.colnames)
+            from_cols = pl.Series(self.select(names_from, values_from).colnames)
+            id_cols = tl_cols.filter(tl_cols.is_in(from_cols).not_()).to_list()
 
         if names_list is None:
             names_list = self.select(names_from).collect().to_series().unique()
@@ -684,7 +685,7 @@ class TibbleLazy(pl.LazyFrame):
         )
 
         if values_fill != None:
-            new_cols = pl.Series(out.names)
+            new_cols = pl.Series(out.colnames)
             new_cols = new_cols.filter(~new_cols.is_in(id_cols))
             fill_exprs = [col(new_col).fill_null(values_fill) for new_col in new_cols]
             out = out.mutate(*fill_exprs)
@@ -716,11 +717,11 @@ class TibbleLazy(pl.LazyFrame):
         >>> tf = tp.TibbleFrame({'a': range(3), 'b': range(3))
         >>> tf.pull('a')
         """
-        if var == None:
+        if var is None:
             var = self.colnames[-1]
         return super().select(var).collect().to_series()
 
-    def relocate(self, *args, _before = None, _after = None):
+    def relocate(self, *args, _before=None, _after=None):
         """
         Move a column or columns to a new position
 
@@ -732,16 +733,16 @@ class TibbleLazy(pl.LazyFrame):
         Examples
         --------
         >>> tl = tp.TibbleLazy({'a': range(3), 'b': range(3), 'c': ['a', 'a', 'b']})
-        >>> tl.relocate('a', before = 'c')
-        >>> tl.relocate('b', after = 'c')
+        >>> tl.relocate('a', before='c')
+        >>> tl.relocate('b', after='c')
         """
-        cols_all = pl.Series(self.names)
+        cols_all = pl.Series(self.colnames)
         locs_all = pl.Series(range(len(cols_all)))
         locs_dict = {k:v for k,v in zip(cols_all, locs_all)}
-        locs_lf = pl.DataFrame(locs_dict, orient = "row")
+        locs_tl = pl.DataFrame(locs_dict, orient="row")
 
         cols_relocate = _as_list(args)
-        locs_relocate = pl.Series(locs_lf.select(cols_relocate).row(0))
+        locs_relocate = pl.Series(locs_tl.select(cols_relocate).row(0))
 
         if (len(locs_relocate) == 0):
             return self
@@ -756,19 +757,19 @@ class TibbleLazy(pl.LazyFrame):
             uses_before = True
 
         if uses_before:
-            _before = locs_lf.select(_before).get_column(_before)
+            _before = locs_tl.select(_before).get_column(_before)
             locs_start = locs_all.filter(locs_all < _before)
         else:
-            _after = locs_lf.select(_after).get_column(_after)
+            _after = locs_tl.select(_after).get_column(_after)
             locs_start = locs_all.filter(locs_all <= _after)
 
         locs_start = locs_start.filter(~locs_start.is_in(locs_relocate))
-        final_order = pl.concat([locs_start, locs_relocate, locs_all]).unique(maintain_order = True)
+        final_order = pl.concat([locs_start, locs_relocate, locs_all]).unique(maintain_order=True)
         final_order = cols_all[final_order].to_list()
 
         return self.select(final_order)
 
-    def rename(self, mapping = None, **kwargs):
+    def rename(self, mapping=None, **kwargs):
         """
         Rename columns
 
@@ -785,11 +786,11 @@ class TibbleLazy(pl.LazyFrame):
         >>> tl.rename(new_x = 'x') # dplyr interface
         >>> tl.rename({'x': 'new_x'}) # pandas interface
         """
-        if mapping == None:
+        if mapping is None:
             mapping = {value:key for key, value in kwargs.items()}
         return super().rename(mapping).pipe(_from_polars_lazy)
 
-    def replace_null(self, replace = None):
+    def replace_null(self, replace=None):
         """
         Replace null values
 
@@ -803,13 +804,13 @@ class TibbleLazy(pl.LazyFrame):
         >>> tl = tp.TibbleLazy(x = [0, None], y = [None, None])
         >>> tl.replace_null(dict(x = 1, y = 2))
         """
-        if replace == None: return self
+        if replace is None: return self
         if type(replace) != dict:
-            ValueError("replace must be a dictionary of column/replacement pairs")
+            raise ValueError("replace must be a dictionary of column/replacement pairs")
         replace_exprs = [col(key).fill_null(value) for key, value in replace.items()]
         return self.mutate(*replace_exprs)
 
-    def separate(self, sep_col, into, sep = '_', remove = True):
+    def separate(self, sep_col, into, sep='_', remove=True):
         """
         Separate a character column into multiple columns
 
@@ -827,10 +828,10 @@ class TibbleLazy(pl.LazyFrame):
         Examples
         --------
         >>> tl = tp.TibbleLazy(x = ['a_a', 'b_b', 'c_c'])
-        >>> tl.separate('x', into = ['left', 'right'])
+        >>> tl.separate('x', into=['left', 'right'])
         """
         into_len = len(into) - 1
-        sep_lf = (
+        sep_tl = (
             self
             .as_polars()
             .select(col(sep_col)
@@ -841,12 +842,12 @@ class TibbleLazy(pl.LazyFrame):
             .unnest("_seps")
             .pipe(_from_polars_lazy)
         )
-        out = self.bind_cols(sep_lf)
+        out = self.bind_cols(sep_tl)
         if remove == True:
             out = out.drop(sep_col)
         return out
 
-    def set_names(self, nm = None):
+    def set_names(self, nm=None):
         """
         Change the column names of the data frame
 
@@ -860,9 +861,10 @@ class TibbleLazy(pl.LazyFrame):
         >>> tl = tp.TibbleLazy(x = range(3), y = range(3))
         >>> tl.set_names(['a', 'b'])
         """
-        if nm == None: nm = self.names
+        if nm is None:
+            nm = self.colnames
         nm = _as_list(nm)
-        rename_dict = {k:v for k, v in zip(self.names, nm)}
+        rename_dict = {k:v for k, v in zip(self.colnames, nm)}
         return self.rename(rename_dict)
 
     def select(self, *args):
@@ -976,8 +978,10 @@ class TibbleLazy(pl.LazyFrame):
         --------
         >>> tl = tp.TibbleLazy({'a': range(3), 'b': range(3), 'c': ['a', 'a', 'b']})
         >>> tl.summarize(avg_a = tp.mean(col('a')))
-        >>> tl.summarize(avg_a = tp.mean(col('a')),
-        ...              max_b = tp.max(col('b')))
+        >>> tl.summarize(
+        ...     avg_a = tp.mean(col('a')),
+        ...     max_b = tp.max(col('b'))
+        ... )
         """
         exprs = _as_list(args) + _kwargs_as_exprs(kwargs)
         out = super().select(exprs)
@@ -987,7 +991,7 @@ class TibbleLazy(pl.LazyFrame):
         """Alias for `.slice_tail()`"""
         return self.slice_tail(n, over=over).pipe(_from_polars_lazy)
 
-    def unite(self, col = "_united", unite_cols = [], sep = "_", remove = True):
+    def unite(self, col="_united", unite_cols=None, sep="_", remove=True):
         """
         Unite multiple columns by pasting strings together
 
@@ -1007,14 +1011,14 @@ class TibbleLazy(pl.LazyFrame):
         >>> tl = tp.TibbleLazy(a = ["a", "a", "a"], b = ["b", "b", "b"], c = range(3))
         >>> tl.unite("united_col", unite_cols = ["a", "b"])
         """
-        if len(unite_cols) == 0:
-            unite_cols = self.names
+        if unite_cols is None:
+            unite_cols = self.colnames
         else:
-            unite_cols = self.select(unite_cols).names
+            unite_cols = self.select(unite_cols).colnames
         _before = unite_cols[0]
         unite_cols = _col_exprs(unite_cols)
-        out = self.mutate(str_concat(*unite_cols, sep = sep).alias(col))
-        out = out.relocate(col, _before = _before)
+        out = self.mutate(str_concat(*unite_cols, sep=sep).alias(col))
+        out = out.relocate(col, _before=_before)
         if remove == True:
             out = out.drop(unite_cols)
         return out
@@ -1056,7 +1060,7 @@ def as_tl(x):
 
     Examples
     --------
-    >>> tp.as_tibble(polars_lf)
+    >>> tp.as_tibble(polars_tl)
     """
     if isinstance(x, pl.LazyFrame):
         out = _from_polars_lazy(x)
@@ -1083,9 +1087,9 @@ def is_tl(x):
     return isinstance(x, TibbleLazy)
 
 def _from_polars_lazy(lf):
-    lf = copy.copy(lf)
-    lf.__class__ = TibbleLazy
-    return lf
+    tl = copy.copy(lf)
+    tl.__class__ = TibbleLazy
+    return tl
 
 _allowed_methods = [
     'dtypes', 'frame_equal',

@@ -1,5 +1,4 @@
 import polars as pl
-from polars.datatypes.classes import Categorical
 
 __all__ = [
     'col', 'exclude', 'lit', 'Expr', 'Series',

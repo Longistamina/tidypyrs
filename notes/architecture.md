@@ -152,7 +152,7 @@ This file contains the definition of standalone functions
 that should be called directly from ```tidypyrs```   
 
 For example:
-```
+```python
 import tidypyrs as tp
 
 tp.as_enum()
@@ -164,13 +164,15 @@ This file contains the definitions of ```_Deferred``` and ```_FrameReference``` 
 which allow bypassing the need of ```.pipe()``` method in certain cases.   
 
 Example:   
-```
+```python
 import tidypyrs as tp
 from tidypyrs import f
 
-tl = tp.TibbleLazy(
-    y=["b", "a", "b"]
-).mutate(
-    y=tp.as_ordered(f.select("y"))
+tl = (
+    tp.TibbleLazy(y=["b", "a", "b"])
+    .mutate(
+        y=tp.as_ordered(f.select("y"))
+        # Don't need to call `.pipe(lambda f: f.mutate(y = tp.as_ordered(f.select("y"))))`
+    )
 )
 ```

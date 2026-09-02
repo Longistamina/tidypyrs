@@ -19,7 +19,7 @@ __all__ = [
     "year"
 ]
 
-def as_date(x, format = None):
+def as_date(x, format=None):
     """
     Convert a string to a Date
 
@@ -32,13 +32,13 @@ def as_date(x, format = None):
 
     Examples
     --------
-    >>> df = tp.tibble(x = ['2021-01-01', '2021-10-01'])
-    >>> df.mutate(date_x = tp.as_date(tp.col('x')))
+    >>> tf = tp.TibbleFrame(x = ['2021-01-01', '2021-10-01'])
+    >>> tf.mutate(date_x = tp.as_date(tp.col('x')))
     """
     x = _col_expr(x)
-    return x.str.strptime(pl.Date, format = format)
+    return x.str.strptime(pl.Date, format=format)
 
-def as_datetime(x, format = None):
+def as_datetime(x, format=None):
     """
     Convert a string to a Datetime
 
@@ -51,11 +51,11 @@ def as_datetime(x, format = None):
 
     Examples
     --------
-    >>> df = tp.tibble(x = ['2021-01-01', '2021-10-01'])
-    >>> df.mutate(date_x = tp.as_datetime(tp.col('x')))
+    >>> tf = tp.TibbleFrame(x = ['2021-01-01', '2021-10-01'])
+    >>> tf.mutate(date_x = tp.as_datetime(tp.col('x')))
     """
     x = _col_expr(x)
-    return x.str.strptime(pl.Datetime, format = format)
+    return x.str.strptime(pl.Datetime, format=format)
 
 def hour(x):
     """
@@ -68,7 +68,7 @@ def hour(x):
 
     Examples
     --------
-    >>> df.mutate(hour = tp.as_hour(tp.col('x')))
+    >>> tf.mutate(hour = tp.as_hour(tp.col('x')))
     """
     x = _col_expr(x)
     return x.dt.hour()
@@ -84,12 +84,12 @@ def mday(x):
 
     Examples
     --------
-    >>> df.mutate(monthday = tp.mday(tp.col('x')))
+    >>> tf.mutate(monthday = tp.mday(tp.col('x')))
     """
     x = _col_expr(x)
     return x.dt.day()
 
-def make_date(year = 1970, month = 1, day = 1):
+def make_date(year=1970, month=1, day=1):
     """
     Create a date object
 
@@ -104,11 +104,11 @@ def make_date(year = 1970, month = 1, day = 1):
 
     Examples
     --------
-    >>> df.mutate(date = tp.make_date(2000, 1, 1))
+    >>> tf.mutate(date=tp.make_date(2000, 1, 1))
     """
     return pl.date(year, month, day)
 
-def make_datetime(year = 1970, month = 1, day = 1, hour = 0, minute = 0, second = 0):
+def make_datetime(year=1970, month=1, day=1, hour=0, minute=0, second=0):
     """
     Create a datetime object
 
@@ -129,7 +129,7 @@ def make_datetime(year = 1970, month = 1, day = 1, hour = 0, minute = 0, second 
 
     Examples
     --------
-    >>> df.mutate(date = tp.make_datetime(2000, 1, 1))
+    >>> tf.mutate(date = tp.make_datetime(2000, 1, 1))
     """
     return pl.datetime(year, month, day, hour, minute, second)
 
@@ -144,7 +144,7 @@ def minute(x):
 
     Examples
     --------
-    >>> df.mutate(hour = tp.minute(tp.col('x')))
+    >>> tf.mutate(hour = tp.minute(tp.col('x')))
     """
     x = _col_expr(x)
     return x.dt.minute()
@@ -160,7 +160,7 @@ def month(x):
 
     Examples
     --------
-    >>> df.mutate(year = tp.month(tp.col('x')))
+    >>> tf.mutate(year = tp.month(tp.col('x')))
     """
     x = _col_expr(x)
     return x.dt.month()
@@ -176,7 +176,7 @@ def quarter(x):
 
     Examples
     --------
-    >>> df.mutate(quarter = tp.quarter(tp.col('x')))
+    >>> tf.mutate(quarter = tp.quarter(tp.col('x')))
     """
     x = _col_expr(x)
     return (x.dt.month() // 4) + 1
@@ -222,7 +222,7 @@ def dt_round(x, rule, n=1):
 
     Examples
     --------
-    >>> df.mutate(monthday = tp.mday(tp.col('x')))
+    >>> tf.mutate(monthday = tp.mday(tp.col('x')))
     """
     x = _col_expr(x)
     freq = _frequencies[rule]
@@ -240,7 +240,7 @@ def second(x):
 
     Examples
     --------
-    >>> df.mutate(hour = tp.minute(tp.col('x')))
+    >>> tf.mutate(hour = tp.minute(tp.col('x')))
     """
     x = _col_expr(x)
     return x.dt.second()
@@ -256,7 +256,7 @@ def wday(x):
 
     Examples
     --------
-    >>> df.mutate(weekday = tp.wday(tp.col('x')))
+    >>> tf.mutate(weekday = tp.wday(tp.col('x')))
     """
     x = _col_expr(x)
     return x.dt.weekday() + 1
@@ -272,7 +272,7 @@ def week(x):
 
     Examples
     --------
-    >>> df.mutate(week = tp.week(tp.col('x')))
+    >>> tf.mutate(week = tp.week(tp.col('x')))
     """
     x = _col_expr(x)
     return x.dt.week()
@@ -288,7 +288,7 @@ def yday(x):
 
     Examples
     --------
-    >>> df.mutate(yearday = tp.yday(tp.col('x')))
+    >>> tf.mutate(yearday = tp.yday(tp.col('x')))
     """
     x = _col_expr(x)
     return x.dt.ordinal_day()
@@ -304,7 +304,7 @@ def year(x):
 
     Examples
     --------
-    >>> df.mutate(year = tp.year(tp.col('x')))
+    >>> tf.mutate(year = tp.year(tp.col('x')))
     """
     x = _col_expr(x)
     return x.dt.year()
