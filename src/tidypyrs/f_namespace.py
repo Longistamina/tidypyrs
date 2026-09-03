@@ -1,9 +1,10 @@
 '''Detailed explanations of this file is in `notes/f_namespace_explain.md`'''
 
-import polars as pl
 from collections.abc import Callable
-from typing import Any
 from functools import wraps
+from typing import Any
+
+import polars as pl
 
 # ======================================
 # define _Deferred class
@@ -90,6 +91,15 @@ class _FrameReference:
             f("a", "b", "c") -> pl.col("a", "b", "c")
         """
         return pl.col(*names)
+
+    def all(self):
+        """
+        Select all columns as a Polars expression.
+
+        --------------------------------
+        f.all() -> pl.all()
+        """
+        return pl.all()
 
     def select(self, *exprs, **named_exprs) -> _Deferred:
         """

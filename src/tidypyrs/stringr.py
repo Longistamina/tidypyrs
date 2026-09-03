@@ -1,8 +1,8 @@
-import polars as pl
+import polars as pl  # noqa: I001
 import functools as ft
 from .utils import _as_list, _col_expr
 
-__all__ = [
+__all__ = [  # noqa: RUF022
     "str_length",
     #####################
     "str_to_lower",

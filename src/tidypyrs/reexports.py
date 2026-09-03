@@ -1,9 +1,16 @@
 import polars as pl
 
-__all__ = [
+__all__ = [  # noqa: RUF022
+    # Experessions
+    "all",
     "col",
+    "concat_list",
+    "element",
     "exclude",
     "lit",
+    "struct",
+    "when",
+    # Experession types
     "Expr",
     "Series",
     # dtypes
@@ -25,11 +32,20 @@ __all__ = [
     "Categorical",
     "Enum",
     "Object",
+    "Null",
 ]
 
+# Expressions
+all = pl.all
 col = pl.col
+concat_list = pl.concat_list
+element = pl.element
 exclude = pl.exclude
 lit = pl.lit
+struct = pl.struct
+when = pl.when
+
+# Expression types
 Expr = pl.Expr
 Series = pl.Series
 

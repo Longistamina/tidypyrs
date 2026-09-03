@@ -37,6 +37,22 @@ def test_f_getitem_call():
     assert tf.select(f(["x", "y"])).equals(expected)
 
 
+def test_f_all():
+    actual = tp.TibbleFrame(
+        x=[1, None],
+        y=[None, 2],
+    ).mutate(
+        f.all().fill_null(0)
+    )
+
+    expected = tp.TibbleFrame(
+        x=[1, 0],
+        y=[0, 2],
+    )
+
+    assert actual.equals(expected)
+
+
 def test_f_select():
     actual = tp.TibbleFrame(y=["b", "a", "b"]).mutate(y=tp.as_ordered(f.select("y")))
 

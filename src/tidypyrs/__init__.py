@@ -13,7 +13,6 @@ from . import stringr as _stringr
 from . import tibble_frame as _tibble_frame
 from . import tibble_lazy as _tibble_lazy
 from . import tidyselect as _tidyselect
-
 from .f_namespace import *
 from .funs import *
 from .lubridate import *
@@ -22,7 +21,6 @@ from .stringr import *
 from .tibble_frame import *
 from .tibble_lazy import *
 from .tidyselect import *
-
 
 __all__ = [
     "__version__",
