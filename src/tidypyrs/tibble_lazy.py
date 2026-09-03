@@ -64,6 +64,7 @@ class TibbleLazy(pl.LazyFrame):
             "left_join",
             "mutate",
             "full_join",
+            "pipe",
             "pivot_longer",
             "pivot_wider",
             "print",
@@ -642,6 +643,47 @@ class TibbleLazy(pl.LazyFrame):
 
         out = _mutate_cols(self.as_polars(), exprs)
         return out.pipe(_from_polars_lazy)
+
+    def pipe(self, function, *args, **kwargs):
+        """
+        Offers a structured way to apply a sequence of user-defined functions (UDFs).
+
+        .. engine-support:: in-memory, streaming, distributed
+
+        Parameters
+        ----------
+        function
+            Callable; will receive the frame as the first parameter,
+            followed by any given args/kwargs.
+        *args
+            Arguments to pass to the UDF.
+        **kwargs
+            Keyword arguments to pass to the UDF.
+
+        Examples
+        --------
+        >>> def cast_str_to_int(tl: tp.TibbleLazy, col_name: str) -> tp.TibbleLazy:
+        ...     return tl.mutate(tp.col(col_name).cast(tp.Int64))
+        >>> tl = tp.TibbleLazy(
+        ...     {
+        ...         "a": [1, 2, 3, 4],
+        ...         "b": ["10", "20", "30", "40"],
+        ...     }
+        ... )
+        >>> tl.pipe(cast_str_to_int, col_name="b").collect()
+        shape: (4, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 10  │
+        │ 2   ┆ 20  │
+        │ 3   ┆ 30  │
+        │ 4   ┆ 40  │
+        └─────┴─────┘
+        """
+        return _from_polars_lazy(function(self, *args, **kwargs))
 
     def pivot_longer(self, cols=None, names_to="name", values_to="value"):
         """

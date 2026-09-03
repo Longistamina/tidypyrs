@@ -67,6 +67,7 @@ class TibbleFrame(pl.DataFrame):
             "nrow",
             "ncol",
             "full_join",
+            "pipe",
             "pivot_longer",
             "pivot_wider",
             "print",
@@ -676,6 +677,45 @@ class TibbleFrame(pl.DataFrame):
 
         out = _mutate_cols(self.as_polars(), exprs)
         return out.pipe(_from_polars_frame)
+
+    def pipe(self, function, *args, **kwargs):
+        """
+        Offers a structured way to apply a sequence of user-defined functions (UDFs).
+
+        Parameters
+        ----------
+        function
+            Callable; will receive the frame as the first parameter,
+            followed by any given args/kwargs.
+        *args
+            Arguments to pass to the UDF.
+        **kwargs
+            Keyword arguments to pass to the UDF.
+
+        Notes
+        -----
+        It is recommended to use TibbleLazy when piping operations, in order
+        to fully take advantage of query optimization and parallelization.
+
+        Examples
+        --------
+        >>> def cast_str_to_int(data, col_name):
+        ...     return data.mutate(tp.col(col_name).cast(tp.Int64))
+        >>> tf = tp.TibbleFrame({"a": [1, 2, 3, 4], "b": ["10", "20", "30", "40"]})
+        >>> tf.pipe(cast_str_to_int, col_name="b")
+        shape: (4, 2)
+        ┌─────┬─────┐
+        │ a   ┆ b   │
+        │ --- ┆ --- │
+        │ i64 ┆ i64 │
+        ╞═════╪═════╡
+        │ 1   ┆ 10  │
+        │ 2   ┆ 20  │
+        │ 3   ┆ 30  │
+        │ 4   ┆ 40  │
+        └─────┴─────┘
+        """
+        return _from_polars_frame(function(self, *args, **kwargs))
 
     def pivot_longer(self, cols=None, names_to="name", values_to="value"):
         """

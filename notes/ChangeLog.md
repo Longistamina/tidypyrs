@@ -1,3 +1,7 @@
+# 0.3.0
++ Add `TibbleFrame.pipe()` method in `tibble_frame.py`
++ Add `TibbleLazy.pipe()` method in `tibble_lazy.py`
+
 # 0.2.0
 + Add `pl.all`, `pl.when`, `pl.struct`, `pl.element`, `pl.concat_list` to `reexports.py`
 + Add `f.all()` method as alias for `pl.all()`
