@@ -1,3 +1,7 @@
+# 0.4.0
++ Add `read_excel` function to `funs.py`
++ Add `scan_csv` function to `funs.py`
+
 # 0.3.0
 + Add `TibbleFrame.pipe()` method in `tibble_frame.py`
 + Add `TibbleLazy.pipe()` method in `tibble_lazy.py`

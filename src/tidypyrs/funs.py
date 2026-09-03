@@ -29,13 +29,16 @@ __all__ = [  # noqa: RUF022
     "lead",
     "log",
     "log10",
-    "read_csv",
-    "read_parquet",
     "rep",
     "replace_null",
     "round",
     "row_number",
     "sqrt",
+    # read data
+    "read_csv",
+    "read_parquet",
+    "read_excel",
+    "scan_csv",
     # convert from pandas and polars,
     "from_pandas",
     "from_polars",
@@ -970,12 +973,17 @@ def quantile(x, quantile=0.5):
     return x.quantile(quantile)
 
 
-def read_csv(file: str, *args, **kwargs):
+def read_csv(file, *args, **kwargs):
     """Simple wrapper around polars.read_csv"""
     return pl.read_csv(file, *args, **kwargs).pipe(from_polars)
 
 
-def read_parquet(source: str, *args, **kwargs):
+def read_excel(file, *args, **kwargs):
+    """Simple wrapper around polars.read_excel"""
+    return pl.read_excel(file, *args, **kwargs).pipe(from_polars)
+
+
+def read_parquet(source, *args, **kwargs):
     """Simple wrapper around polars.read_parquet"""
     return pl.read_parquet(source, *args, **kwargs).pipe(from_polars)
 
@@ -1003,7 +1011,7 @@ def rep(x, times=1):
     elif _is_list(x):
         out = x
     elif isinstance(x, (TibbleFrame, TibbleLazy)):
-        out = pl.concat([x for i in range(times)]).pipe(from_polars)
+        out = pl.concat([x for _ in range(times)]).pipe(from_polars)
     elif _is_iterable(x):
         out = list(x)
     else:
@@ -1078,6 +1086,11 @@ def sd(x):
     """
     x = _col_expr(x)
     return x.std()
+
+
+def scan_csv(file, *args, **kwargs):
+    """Simple wrapper around polars.scan_csv"""
+    return pl.scan_csv(file, *args, **kwargs).pipe(from_polars)
 
 
 def sqrt(x):
