@@ -1,6 +1,6 @@
 # 0.2.0
 + Add `pl.all`, `pl.when`, `pl.struct`, `pl.element`, `pl.concat_list` to `reexports.py`
-+ Add `f.all()` method to as alias for `pl.all()`
++ Add `f.all()` method as alias for `pl.all()`
 + Reorganize imports
 
 # 0.1.1
