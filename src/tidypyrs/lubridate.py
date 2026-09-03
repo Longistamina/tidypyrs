@@ -1,9 +1,11 @@
 import polars as pl
+
 from .utils import _col_expr
 
 __all__ = [
     "as_date",
     "as_datetime",
+    "dt_round",
     "hour",
     "make_date",
     "make_datetime",
@@ -11,7 +13,6 @@ __all__ = [
     "minute",
     "month",
     "quarter",
-    "dt_round",
     "second",
     "wday",
     "week",

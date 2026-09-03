@@ -1,7 +1,14 @@
-import polars as pl
-from datetime import timedelta
+import copy
 import functools as ft
+from datetime import timedelta
+from operator import and_, not_
 
+import polars as pl
+
+from .groupby import TibbleLazyGroupBy
+from .reexports import *
+from .stringr import str_concat
+from .tidyselect import everything
 from .utils import (
     _as_list,
     _col_exprs,
@@ -9,20 +16,14 @@ from .utils import (
     _is_string,
     _kwargs_as_exprs,
     _mutate_cols,
-    _uses_over,
     _over_exprs,
+    _uses_over,
 )
-from .stringr import str_concat
-from .groupby import TibbleLazyGroupBy
-import copy
-from .reexports import *
-from .tidyselect import everything
-from operator import not_, and_
 
 __all__ = [
+    "TibbleLazy",
     "as_tl",
     "is_tl",
-    "TibbleLazy",
 ]
 
 

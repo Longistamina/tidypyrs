@@ -1,5 +1,8 @@
 import copy
+
 import polars as pl
+
+from .f_namespace import _defer_aware
 from .tibble_frame import TibbleFrame
 from .tibble_lazy import TibbleLazy
 from .utils import (
@@ -7,14 +10,13 @@ from .utils import (
     _col_expr,
     _col_exprs,
     _is_constant,
-    _is_list,
     _is_iterable,
+    _is_list,
     _is_series,
     _str_to_lit,
 )
-from .f_namespace import _defer_aware
 
-__all__ = [
+__all__ = [  # noqa: RUF022
     # General functions
     "abs",
     "across",

@@ -1,7 +1,9 @@
+from itertools import chain
+from operator import not_
+
 import polars as pl
 import polars.selectors as cs
-from operator import not_
-from itertools import chain
+
 from .f_namespace import _Deferred
 
 __all__ = []

@@ -44,6 +44,22 @@ def test_f_select():
     assert actual.pull("y").to_list() == ["b", "a", "b"]
 
 
+def test_f_all():
+    actual = tp.TibbleLazy(
+        x=[1, None],
+        y=[None, 2],
+    ).mutate(
+        f.all().fill_null(0)
+    )
+
+    expected = tp.TibbleLazy(
+        x=[1, 0],
+        y=[0, 2],
+    )
+
+    assert actual.equals(expected)
+
+
 def test_f_select_respects_sequential_mutate():
     actual = tp.TibbleLazy(y=["b", "a", "b"]).mutate(
         copied=pl.col("y"),

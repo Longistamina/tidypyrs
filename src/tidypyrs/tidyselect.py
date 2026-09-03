@@ -1,5 +1,6 @@
-import polars.selectors as cs
 import re
+
+import polars.selectors as cs
 
 __all__ = ["contains", "ends_with", "everything", "starts_with", "where"]
 
