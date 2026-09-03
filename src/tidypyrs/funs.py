@@ -973,19 +973,29 @@ def quantile(x, quantile=0.5):
     return x.quantile(quantile)
 
 
-def read_csv(file, *args, **kwargs):
-    """Simple wrapper around polars.read_csv"""
-    return pl.read_csv(file, *args, **kwargs).pipe(from_polars)
+def read_csv(source, **kwargs):
+    """Read a CSV file into a TibbleFrame."""
+    return pl.read_csv(source, **kwargs).pipe(from_polars)
 
 
-def read_excel(file, *args, **kwargs):
-    """Simple wrapper around polars.read_excel"""
-    return pl.read_excel(file, *args, **kwargs).pipe(from_polars)
+def read_excel(source, **kwargs):
+    """
+    Read Excel data into a TibbleFrame or a dictionary of TibbleFrames.
+    """
+    result = pl.read_excel(source, **kwargs)
+
+    if isinstance(result, dict):
+        return {
+            sheet_name: from_polars(frame)
+            for sheet_name, frame in result.items()
+        }
+
+    return from_polars(result)
 
 
-def read_parquet(source, *args, **kwargs):
-    """Simple wrapper around polars.read_parquet"""
-    return pl.read_parquet(source, *args, **kwargs).pipe(from_polars)
+def read_parquet(source, **kwargs):
+    """Read Parquet data into a TibbleFrame."""
+    return pl.read_parquet(source, **kwargs).pipe(from_polars)
 
 
 def rep(x, times=1):
@@ -1088,9 +1098,9 @@ def sd(x):
     return x.std()
 
 
-def scan_csv(file, *args, **kwargs):
-    """Simple wrapper around polars.scan_csv"""
-    return pl.scan_csv(file, *args, **kwargs).pipe(from_polars)
+def scan_csv(source, **kwargs):
+    """Lazily scan CSV data into a TibbleLazy."""
+    return pl.scan_csv(source, **kwargs).pipe(from_polars)
 
 
 def sqrt(x):

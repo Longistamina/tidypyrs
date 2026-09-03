@@ -1,3 +1,7 @@
+# 0.4.1
++ Fix bugs for `read_excel` and change its signatures
++ Change signatures of `read_csv`, `read_parquet` and `scan_csv`
+
 # 0.4.0
 + Add `read_excel` function to `funs.py`
 + Add `scan_csv` function to `funs.py`
