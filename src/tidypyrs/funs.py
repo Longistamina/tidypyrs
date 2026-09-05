@@ -177,21 +177,24 @@ def as_enum(x, categories=None, reverse: bool = False):
 
     if categories is None:
         if isinstance(x, pl.DataFrame):
-            categories = x.to_series().cast(pl.String).drop_nulls().unique().sort()
+            categories = x.to_series().cast(pl.String).drop_nulls().drop_nans().unique().sort()
             x = categories.name
 
         elif isinstance(x, pl.LazyFrame):
-            categories = x.collect().to_series().cast(pl.String).drop_nulls().unique().sort()
+            categories = x.collect().to_series().cast(pl.String).drop_nulls().drop_nans().unique().sort()
             x = categories.name
 
         else:
             raise ValueError("`categories` or output from `tf.select('x')` must be provided")
 
     elif not isinstance(x, (str, pl.Expr)):
-        raise TypeError("`categories` is provided, then `x` should be a string or a column expression, not either TibbleFrame or TibbleLazy")
+        raise TypeError("`categories` is provided, then `x` should be a string or a column expression, not TibbleFrame/TibbleLazy from `tf.select('x')`")
 
-    categories = pl.Series(categories) if not isinstance(categories, pl.Series) else categories
-    categories = categories.unique().sort() if not categories.is_unique().all() else categories
+    else:
+        categories = pl.Series(categories) if not isinstance(categories, pl.Series) else categories
+        categories = categories.cast(pl.String) if (categories.dtype != pl.String) else categories
+        categories = categories.drop_nulls().drop_nans().sort() if not categories.is_unique().all() else categories
+
     categories = categories.reverse() if reverse else categories
 
     return _col_expr(x).cast(pl.String).cast(pl.Enum(categories))

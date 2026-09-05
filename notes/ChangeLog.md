@@ -1,3 +1,6 @@
+# 0.5.1
++ Make `as_enum` and `as_ordered` handle `categories` better when user explicitly provide `categories`
+
 # 0.5.0
 + Enhance the behaviour of `_defer_aware` decorator
 + Add `f.pull(var)` method for `f` namespace
