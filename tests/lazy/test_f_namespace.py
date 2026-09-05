@@ -6,6 +6,7 @@ import numpy as np
 import polars as pl
 import tidypyrs as tp
 from tidypyrs import f
+from tidypyrs.f_namespace import _defer_aware
 
 
 def test_f_column_expression():
@@ -67,3 +68,51 @@ def test_f_select_respects_sequential_mutate():
     )
 
     assert isinstance(actual.pull("ordered").dtype, pl.Enum)
+
+
+@_defer_aware
+def combine(a, b):
+    return a, b
+
+def test_multiple_deferred_arguments():
+    operation = combine(
+        f.select("x"),
+        b=f.select("y"),
+    )
+
+    frame = tp.TibbleLazy(
+        x=[1, 2],
+        y=[3, 4],
+    )
+
+    x, y = operation.resolve(frame)
+
+    assert x.colnames.equals(pl.Series(["x"]))
+    assert y.colnames.equals(pl.Series(["y"]))
+
+
+def test_f_pull():
+    result = tp.TibbleLazy(
+        legendary=["yes", "no", "yes"],
+    ).mutate(
+        f.legendary.pipe(
+            tp.as_enum,
+            categories=f.pull("legendary"),
+        )
+    )
+
+    assert result.pull("legendary").dtype == pl.Enum
+
+
+def test_f_pull_last_column():
+    result = tp.TibbleLazy(
+        x=[1, 2],
+        legendary=["yes", "no"],
+    ).mutate(
+        f.legendary.pipe(
+            tp.as_enum,
+            categories=f.pull(),
+        )
+    )
+
+    assert result.pull("legendary").dtype == pl.Enum

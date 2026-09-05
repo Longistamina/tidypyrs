@@ -1,6 +1,7 @@
 import copy
 
 import polars as pl
+from tidypyrs.reexports import Expr
 
 from .f_namespace import _defer_aware
 from .tibble_frame import TibbleFrame
@@ -144,7 +145,7 @@ def as_categorical(x):
 
 
 @_defer_aware
-def as_enum(x, categories=None, reverse=False):
+def as_enum(x, categories=None, reverse: bool = False):
     """
     Convert a column to a Polars Enum.
 
@@ -186,11 +187,12 @@ def as_enum(x, categories=None, reverse=False):
         else:
             raise ValueError("`categories` or output from `tf.select('x')` must be provided")
 
-    elif not isinstance(x, str):
-        raise TypeError("`categories` is provided, then `x` should be a string, not either TibbleFrame or TibbleLazy")
+    elif not isinstance(x, (str, pl.Expr)):
+        raise TypeError("`categories` is provided, then `x` should be a string or a column expression, not either TibbleFrame or TibbleLazy")
 
-    if reverse:
-        categories = categories.reverse() if isinstance(categories, pl.Series) else _as_list(categories)[::-1]
+    categories = pl.Series(categories) if not isinstance(categories, pl.Series) else categories
+    categories = categories.unique().sort() if not categories.is_unique().all() else categories
+    categories = categories.reverse() if reverse else categories
 
     return _col_expr(x).cast(pl.String).cast(pl.Enum(categories))
 

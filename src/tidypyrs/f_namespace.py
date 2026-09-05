@@ -35,17 +35,41 @@ class _Deferred:
 
 def _defer_aware(function):
     @wraps(function)
-    def wrapper(x, *args, **kwargs):
-        if isinstance(x, _Deferred):
-            return x.map(
-                lambda resolved: function(
-                    resolved,
-                    *args,
-                    **kwargs,
-                )
+    def wrapper(*args, **kwargs):
+        has_deferred = (
+            any(isinstance(arg, _Deferred) for arg in args)
+            or any(
+                isinstance(value, _Deferred)
+                for value in kwargs.values()
+            )
+        )
+
+        if not has_deferred:
+            return function(*args, **kwargs)
+
+        def resolver(frame):
+            resolved_args = tuple(
+                arg.resolve(frame)
+                if isinstance(arg, _Deferred)
+                else arg
+                for arg in args
             )
 
-        return function(x, *args, **kwargs)
+            resolved_kwargs = {
+                key: (
+                    value.resolve(frame)
+                    if isinstance(value, _Deferred)
+                    else value
+                )
+                for key, value in kwargs.items()
+            }
+
+            return function(
+                *resolved_args,
+                **resolved_kwargs,
+            )
+
+        return _Deferred(resolver)
 
     return wrapper
 
@@ -101,6 +125,30 @@ class _FrameReference:
         """
         return pl.all()
 
+
+    def pull(self, var=None) -> _Deferred:
+        """
+        Defer extracting a column from the current frame as a Series.
+
+        Parameters
+        ----------
+        var : str, optional
+            Column to extract. If omitted, extract the last column
+            of the frame available when this operation is resolved.
+
+        Returns
+        -------
+        _Deferred
+            An operation that resolves to a Polars Series.
+
+        Notes
+        -----
+        Resolving this operation against a TibbleLazy collects the
+        selected column.
+        """
+        from .funs import from_polars
+        return _Deferred(lambda frame: from_polars(frame).pull(var))
+
     def select(self, *exprs, **named_exprs) -> _Deferred:
         """
         Select from the frame currently executing the verb.
@@ -118,6 +166,7 @@ class _FrameReference:
         return _Deferred(lambda frame: frame.select(*exprs, **named_exprs))
 
     sl = select  # Allows `f.sl("a")`
+
 
     def __repr__(self):
         return "f"
