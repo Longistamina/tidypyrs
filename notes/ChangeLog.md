@@ -1,3 +1,6 @@
+# 0.5.2
++ Make `as_enum` and `as_ordered` handle duplicates `categories`
+
 # 0.5.1
 + Make `as_enum` and `as_ordered` handle `categories` better when user explicitly provide `categories`
 
