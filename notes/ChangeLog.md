@@ -1,3 +1,7 @@
+# 0.5.0
++ Enhance the behaviour of `_defer_aware` decorator
++ Add `f.pull(var)` method for `f` namespace
+
 # 0.4.1
 + Fix bugs for `read_excel` and change its signatures
 + Change signatures of `read_csv`, `read_parquet` and `scan_csv`

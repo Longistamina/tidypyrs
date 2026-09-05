@@ -11,12 +11,16 @@ Most Tidypyrs functions work directly with Polars expressions:
 tf.mutate(doubled=tp.col("x") * 2)
 ```
 
-However, functions such as `tp.as_enum()` and `tp.as_ordered()` can ONLY infer
-their categories from a single-column DataFrame or LazyFrame, not merely from a
-column expression. For example, it only works in similar codes like this one:
+However, functions such as `tp.as_enum()` and `tp.as_ordered()` need concrete
+category values. A column expression identifies a computation but does not
+contain the values from which categories can be inferred. One direct form is:
 ```python
 tp.as_enum(tf.select("y"))
 ```
+
+Another form supplies a column expression as `x` and concrete categories
+separately. Inside a method chain, those categories may themselves need to be
+obtained later from the current frame.
 
 This is inconvenient inside a method chain because the current frame must be
 named before we can select from it. Therefore, during a method chaining workflow,
@@ -43,12 +47,15 @@ tp.TibbleFrame(
 )
 ```
 
-The `f` namespace provides two related features:
+The `f` namespace provides two related families of features:
 
-1. concise column expressions such as `f["x"]` and `f.x`;
-2. deferred frame operations such as `f.select("x")`.
+1. immediate Polars expressions such as `f["x"]`, `f.x`, `f("x")`, and
+   `f.all()`;
+2. deferred frame operations such as `f.select("x")` and `f.pull("x")`.
 
-The second feature is why `_Deferred` is necessary.
+The second family is why `_Deferred` is necessary. `f.select()` needs the
+future frame in order to return another frame, while `f.pull()` needs it in
+order to extract concrete column values as a `Series`.
 
 \##---------------------------------------------------------------------------   
 \## 2. Why the current frame is unavailable   
@@ -102,8 +109,9 @@ class _FrameReference:
 f = _FrameReference()
 ```
 
-The class defines what operations such as `f["x"]`, `f.x`, and
-`f.select("x")` mean. The final line creates one public instance named `f`.
+The class defines what operations such as `f["x"]`, `f.x`, `f("x")`,
+`f.all()`, `f.select("x")`, and `f.pull("x")` mean. The final line creates one
+public instance named `f`.
 
 After this assignment, `f` is no longer unknown or undefined. Python knows
 that it is an instance of `_FrameReference` and can look up the behavior
@@ -124,7 +132,7 @@ This matters for nested operations, multiple frames, and concurrent code.
 There is no global "current frame" that could accidentally be overwritten.
 
 \##-----------------------------------------------------------------------------------------------------   
-\## 4. Immediate expressions versus deferred frame selection   
+\## 4. Immediate expressions versus deferred frame operations   
 \##-----------------------------------------------------------------------------------------------------   
 
 `_FrameReference` provides two different kinds of behavior.
@@ -162,6 +170,26 @@ also becomes:
 pl.col("x")
 ```
 
+Calling `f` provides another form of the same column constructor:
+```python
+f("x", "y")
+```
+
+immediately becomes:
+```python
+pl.col("x", "y")
+```
+
+Similarly:
+```python
+f.all()
+```
+
+immediately returns:
+```python
+pl.all()
+```
+
 A Polars expression can be constructed without knowing its future frame, so
 these operations do not need `_Deferred`.
 
@@ -182,7 +210,33 @@ def select(self, *exprs, **named_exprs) -> _Deferred:
     )
 ```
 
-This is where `_FrameReference` connects to `_Deferred`.
+`f.pull()` is also frame-dependent, but its future result is a concrete
+`pl.Series` rather than another frame:
+```python
+def pull(self, var=None) -> _Deferred:
+    from .funs import from_polars
+
+    return _Deferred(
+        lambda frame: from_polars(frame).pull(var)
+    )
+```
+
+The frame received during mutation is normally a native `pl.DataFrame` or
+`pl.LazyFrame`. Native Polars frames do not provide Tidypyrs' `pull()` method,
+so `from_polars(frame)` first converts the native frame into `TibbleFrame` or
+`TibbleLazy`. Dynamic dispatch then calls the appropriate `pull()`:
+```text
+pl.DataFrame  -> TibbleFrame.pull() -> pl.Series
+pl.LazyFrame -> TibbleLazy.pull()  -> pl.Series
+```
+
+The import is deliberately inside `pull()`. `funs.py` imports objects from
+`f_namespace.py`, so importing `funs` at module load time here would create a
+circular import. The local import is postponed until the deferred operation is
+actually resolved, after both modules have finished initializing.
+
+Both `select()` and `pull()` are where `_FrameReference` connects to
+`_Deferred`.
 
 \##----------------------------------------------------------------------------------   
 \## 5. The idea of deferred work   
@@ -227,6 +281,22 @@ At this stage:
 - no DataFrame or LazyFrame has been created;
 - no lazy query has been collected;
 - only the future operation has been recorded.
+
+`f.pull("y")` follows the same deferred pattern, but records a different
+recipe:
+```python
+lambda frame: from_polars(frame).pull("y")
+```
+
+If `var` is omitted, the choice of the last column is also postponed:
+```python
+f.pull()
+```
+
+This matters during sequential mutation because the working frame may gain new
+columns before the recipe is resolved. `f.pull()` therefore means "pull the
+last column of the frame at resolution time", not necessarily the last column
+of the original input frame.
 
 \##-----------------------------------------------------------------------------------------------------   
 \## 6. `_Deferred`: storing and resolving the recipe   
@@ -354,34 +424,77 @@ d0: select the column from the future frame
 d1: select the column, then convert it into an Enum expression
 ```
 
+`map()` remains a useful primitive for transforming the result of one deferred
+operation. It is also used by `_Deferred.alias()`. However, the generalized
+`_defer_aware` decorator below does not use `map()`, because it may need to
+resolve several independent deferred positional and keyword arguments against
+the same frame. In that situation it constructs one new `_Deferred` resolver
+that has access to the frame directly.
+
 \##-----------------------------------------------------------------------------------------------------   
 \## 8. `functools.wraps`, `_defer_aware`, and `as_enum()`   
 \##-----------------------------------------------------------------------------------------------------   
 
-We want `as_enum()` to support both of these inputs:
+We now want `as_enum()` to support deferred input in any top-level argument,
+not only in `x`:
 ```python
-tp.as_enum(tf.select("y"))  # an actual one-column frame
-tp.as_enum(f.select("y"))   # a deferred one-column selection
+tp.as_enum(f.select("y"))
+
+f.y.pipe(
+    tp.as_enum,
+    categories=f.select("y"),
+)
+
+f.y.pipe(
+    tp.as_enum,
+    categories=f.pull("y"),
+)
 ```
 
-Without changing every line inside `as_enum()`, we can place the deferred
-dispatching behavior in a reusable decorator named `_defer_aware`:
+In the first form, `x` is deferred. In the second and third forms, `x` is
+already the immediate expression `pl.col("y")`, while `categories` is
+deferred. The decorator must therefore inspect every positional argument and
+every keyword value:
 ```python
 from functools import wraps
 
 def _defer_aware(function):
     @wraps(function)
-    def wrapper(x, *args, **kwargs):
-        if isinstance(x, _Deferred):
-            return x.map(
-                lambda resolved: function(
-                    resolved,
-                    *args,
-                    **kwargs,
-                )
+    def wrapper(*args, **kwargs):
+        has_deferred = (
+            any(isinstance(arg, _Deferred) for arg in args)
+            or any(
+                isinstance(value, _Deferred)
+                for value in kwargs.values()
+            )
+        )
+
+        if not has_deferred:
+            return function(*args, **kwargs)
+
+        def resolver(frame):
+            resolved_args = tuple(
+                arg.resolve(frame)
+                if isinstance(arg, _Deferred)
+                else arg
+                for arg in args
             )
 
-        return function(x, *args, **kwargs)
+            resolved_kwargs = {
+                key: (
+                    value.resolve(frame)
+                    if isinstance(value, _Deferred)
+                    else value
+                )
+                for key, value in kwargs.items()
+            }
+
+            return function(
+                *resolved_args,
+                **resolved_kwargs,
+            )
+
+        return _Deferred(resolver)
 
     return wrapper
 ```
@@ -420,9 +533,10 @@ as_enum = _defer_aware(as_enum)
 
 After decoration, the module-level name `as_enum` refers to `wrapper`. The
 `function` variable captured inside `wrapper` still refers to the original,
-undecorated `as_enum` implementation (let's call it `orginal_as_enum`). This is why the decorator can call:
+undecorated `as_enum` implementation (let's call it `original_as_enum`). This
+is why the decorator can call:
 ```python
-return function(x, *args, **kwargs)
+return function(*args, **kwargs)
 ```
 
 without recursively calling the wrapper again.
@@ -432,13 +546,13 @@ without recursively calling the wrapper again.
 Inside `_defer_aware`, `@wraps(function)` decorates `wrapper`:
 ```python
 @wraps(function)
-def wrapper(x, *args, **kwargs):
+def wrapper(*args, **kwargs):
     ...
 ```
 
 This is approximately equivalent to:
 ```python
-def wrapper(x, *args, **kwargs):
+def wrapper(*args, **kwargs):
     ...
 
 wrapper = wraps(function)(wrapper)
@@ -454,6 +568,45 @@ Importantly, `wraps` does not make `_defer_aware` a decorator.
 `_defer_aware` is already a decorator because it accepts `function` and
 returns `wrapper`. `wraps` only preserves the decorated function's identity
 and metadata.
+
+### Detecting deferred arguments
+
+The wrapper first computes `has_deferred`. The first `any()` checks positional
+arguments, while the second checks keyword values:
+```python
+has_deferred = (
+    any(isinstance(arg, _Deferred) for arg in args)
+    or any(
+        isinstance(value, _Deferred)
+        for value in kwargs.values()
+    )
+)
+```
+
+If no deferred argument exists, there is no reason to delay execution:
+```python
+if not has_deferred:
+    return function(*args, **kwargs)
+```
+
+This keeps ordinary calls ordinary. The decorator adds deferred behavior only
+when it is actually required.
+
+If at least one deferred argument exists, the wrapper creates a new resolver.
+When a frame is eventually supplied, every `_Deferred` positional argument and
+keyword value is resolved against that same frame. Non-deferred values are
+preserved unchanged. Only after all arguments are ready does the resolver call
+the original function once.
+
+This design also supports more than one deferred argument:
+```python
+some_defer_aware_function(
+    f.select("x"),
+    other=f.pull("y"),
+)
+```
+
+Both recipes receive the identical current frame during resolution.
 
 ### Applying `_defer_aware` to `as_enum()`
 
@@ -483,10 +636,11 @@ For a normal input:
 tp.as_enum(tf.select("y"))
 ```
 
-the public name `as_enum` calls `wrapper`. Since `x` is not deferred, the
-wrapper immediately calls the original function:
+the public name `as_enum` calls `wrapper`. Since neither the positional nor
+keyword arguments are deferred, the wrapper immediately calls the original
+function:
 ```python
-return function(x, *args, **kwargs)
+return function(*args, **kwargs)
 ```
 
 For a deferred input, Python first evaluates:
@@ -499,16 +653,8 @@ and then calls:
 tp.as_enum(d0)
 ```
 
-The wrapper detects `d0` and returns:
-```python
-d1 = d0.map(
-    lambda resolved: function(
-        resolved,
-        categories=categories,
-        reverse=reverse,
-    )
-)
-```
+The wrapper detects `d0` and returns a new `_Deferred` whose resolver will
+replace `d0` with `d0.resolve(frame)` before calling `original_as_enum()`.
 
 Conceptually, `d1` stores:
 ```python
@@ -524,6 +670,43 @@ d1 = _Deferred(
 There is no immediate execution and no infinite recursion. Later,
 `d1.resolve(frame)` first produces the real one-column frame and then passes
 it directly into the original `as_enum()` implementation.
+
+Now consider deferred categories:
+```python
+d_categories = f.pull("y")
+
+d1 = f.y.pipe(
+    tp.as_enum,
+    categories=d_categories,
+)
+```
+
+`Expr.pipe()` passes `f.y` as the first argument to `as_enum()`. At wrapper
+time, the effective arguments are conceptually:
+```python
+args = (pl.col("y"),)
+kwargs = {"categories": d_categories}
+```
+
+The column expression remains unchanged. When the new deferred result is
+resolved, the keyword argument becomes:
+```python
+{
+    "categories": from_polars(frame).pull("y")
+}
+```
+
+The original function is then called as:
+```python
+original_as_enum(
+    pl.col("y"),
+    categories=from_polars(frame).pull("y"),
+)
+```
+
+For an eager frame, `pull()` obtains the existing column as a `Series`. For a
+lazy frame, `TibbleLazy.pull()` collects the selected column because Enum
+categories must be concrete before the Enum dtype can be constructed.
 
 At this point, `mutate()` is effectively receiving:
 ```python
@@ -545,8 +728,12 @@ def mutate(self, *args, over=None, **kwargs):
     exprs = _over_exprs(exprs, over)
 
     out = _mutate_cols(self.as_polars(), exprs)
-    return out.pipe(_from_polars_frame)
+    return out.pipe(the_matching_tidypyrs_converter)
 ```
+
+The eager implementation converts the result to `TibbleFrame`; the lazy
+implementation converts it to `TibbleLazy`. The deferred-expression handling
+inside `_mutate_cols()` is shared by both paths.
 
 For:
 ```python
@@ -731,6 +918,25 @@ f.select("y")
     -> with_columns()
 ```
 
+When the deferred value is instead supplied as `categories`, the flow is:
+```python
+f.y
+    -> immediate pl.col("y") expression
+
+f.pull("y")
+    -> deferred Series extraction
+
+f.y.pipe(tp.as_enum, categories=f.pull("y"))
+    -> _defer_aware detects the deferred keyword value
+    -> one deferred as_enum call
+    -> mutate supplies its current native Polars frame
+    -> from_polars(frame).pull("y") returns a Series
+    -> original_as_enum(pl.col("y"), categories=series)
+    -> deferred alias
+    -> ordinary Polars expression
+    -> with_columns()
+```
+
 \##---------------------------------------------------------------------------------------   
 \## 12. Other features of `f` namespace   
 \##---------------------------------------------------------------------------------------   
@@ -745,6 +951,8 @@ f("x")        # equivalent to pl.col("x")
 f("x", "y")   # equivalent to pl.col("x", "y")
 
 f.x           # equivalent to pl.col("x")
+
+f.all()       # equivalent to pl.all()
 ```
 
 Because these return normal `pl.Expr` objects immediately, they work with
@@ -770,23 +978,48 @@ f.select("x")
 f.select("x", doubled=pl.col("y") * 2)
 ```
 
+`f.sl()` is a short alias with identical behavior:
+```python
+f.sl("x")
+```
+
+`f.pull()` extracts concrete values from the future frame:
+```python
+f.pull("x")   # named column -> deferred pl.Series
+f.pull()      # last column at resolution time -> deferred pl.Series
+```
+
+Unlike `f.select()`, `f.pull()` cannot delegate directly to the native frame,
+because `pull()` is a Tidypyrs method rather than a Polars method. Its resolver
+therefore converts the native working frame through `from_polars()` before
+calling the appropriate eager or lazy `pull()` implementation.
+
+`f.pull()` is mainly intended for functions that need concrete values, such as
+Enum-category discovery. For normal column computation, `f.x`, `f["x"]`, or
+`f("x")` should be used instead.
+
 The central distinction is:
 ```python
 f["x"] or f.x
     -> immediate Polars column expression
 
 f.select("x")
-    -> deferred operation requiring the current frame
+    -> deferred frame requiring the current frame
+
+f.pull("x")
+    -> deferred Series requiring the current frame
 ```
 
 Finally, `f` never contains the actual current DataFrame or LazyFrame. It is a
 symbolic namespace. Frame-dependent operations receive the current frame only
 when a compatible verb, currently `mutate()`, resolves their `_Deferred`
-recipe.
+recipe. This avoids storing mutable global frame state inside `f`.
 
-For a LazyFrame, inferring Enum categories from `f.select("x")` requires an
-internal collection because the category values must be known. To preserve full
-laziness, users should provide categories explicitly:
+For a LazyFrame, inferring Enum categories from either `f.select("x")` or
+`f.pull("x")` requires an internal collection because the category values must
+be known. `f.select()` postpones that collection until `as_enum()` handles the
+selected lazy frame; `f.pull()` performs it through `TibbleLazy.pull()`. To
+preserve full laziness, users should provide categories explicitly:
 ```python
 tl.mutate(
     y=tp.as_enum(
