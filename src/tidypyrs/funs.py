@@ -193,7 +193,7 @@ def as_enum(x, categories=None, reverse: bool = False):
     else:
         categories = pl.Series(categories) if not isinstance(categories, pl.Series) else categories
         categories = categories.cast(pl.String) if (categories.dtype != pl.String) else categories
-        categories = categories.drop_nulls().drop_nans().sort() if not categories.is_unique().all() else categories
+        categories = categories.drop_nulls().drop_nans().unique().sort() if not categories.is_unique().all() else categories
 
     categories = categories.reverse() if reverse else categories
 
