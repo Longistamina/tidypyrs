@@ -147,58 +147,114 @@ def as_categorical(x):
 @_defer_aware
 def as_enum(x, categories=None, reverse: bool = False):
     """
-    Convert a column to a Polars Enum.
-
-    Supply either:
-
-    - `categories`: fixed Enum categories, or
-    - `x=tf.select(x)`: a TibbleFrame/TibbleLazy from which categories are inferred.
-
-    Note: for TibbleLazy, should provide `x` as string and `categories`,
-          otherwise the internal evaluation could be expensive
+    Convert values or a column expression to a Polars Enum.
 
     Parameters
     ----------
-    x : str, col_expr, TibbleFrame, TibbleLazy
-        String or column expression,
-        or the output of selecting single column ``tf.select("x")`` or ``tl.select("x")``
+    x : Series, iterable, str, Expr, DataFrame, or LazyFrame
+        Values to convert, a column reference, or a one-column
+        frame from which categories are inferred.
 
-    categories : iterable of str, Series, optional
-        Enum categories in their desired order.
+    categories : iterable, Series, DataFrame, or LazyFrame, optional
+        Enum categories. A Series or one-column frame is treated
+        as observed data from which unique categories are inferred.
 
-    reverse : bool
-        Reverse the order of the categories or not
+    reverse : bool, default False
+        Reverse the resulting category order.
 
     Returns
     -------
-    Expr
-        Expression casting `x` to Enum.
+    pl.Series or pl.Expr
+        A Series when `x` contains concrete values; otherwise,
+        a Polars expression.
     """
+    returns_series = (isinstance(x, pl.Series) or (_is_iterable(x) and not isinstance(x, (pl.DataFrame, pl.LazyFrame))))
 
-    if categories is None:
-        if isinstance(x, pl.DataFrame):
-            categories = x.to_series().cast(pl.String).drop_nulls().drop_nans().unique().sort()
-            x = categories.name
+    # ---------------------------------------------------------
+    # Determine the expression/value being converted
+    # ---------------------------------------------------------
 
-        elif isinstance(x, pl.LazyFrame):
-            categories = x.collect().to_series().cast(pl.String).drop_nulls().drop_nans().unique().sort()
-            x = categories.name
+    if returns_series:
+        values = _one_column_series(x)
 
-        else:
-            raise ValueError("`categories` or output from `tf.select('x')` must be provided")
+    elif isinstance(x, pl.LazyFrame):
+        schema = x.collect_schema()
 
-    elif not isinstance(x, (str, pl.Expr)):
-        raise TypeError("`categories` is provided, then `x` should be a string or a column expression, not TibbleFrame/TibbleLazy from `tf.select('x')`")
+        if schema.len() != 1:
+            raise ValueError(
+                "Expected a one-column LazyFrame, "
+                f"but received {schema.len()} columns"
+            )
+
+        column_name = schema.names()[0]
+        values = None
+
+    elif isinstance(x, pl.DataFrame):
+        if x.width != 1:
+            raise ValueError(
+                "Expected a one-column DataFrame, "
+                f"but received {x.width} columns"
+            )
+
+        column_name = x.columns[0]
+        values = None
+
+    elif isinstance(x, (str, pl.Expr)):
+        column_name = x
+        values = None
 
     else:
-        categories = pl.Series(categories) if not isinstance(categories, pl.Series) else categories
-        categories = categories.cast(pl.String) if (categories.dtype != pl.String) else categories
-        categories = categories.drop_nulls().drop_nans().unique().sort() if not categories.is_unique().all() else categories
+        raise TypeError(
+            "`x` must be a Series, iterable, column name, "
+            "column expression, or one-column frame"
+        )
 
-    categories = categories.reverse() if reverse else categories
+    # ---------------------------------------------------------
+    # Determine Enum categories
+    # ---------------------------------------------------------
 
-    return _col_expr(x).cast(pl.String).cast(pl.Enum(categories))
+    if categories is None:
+        if returns_series:
+            category_values = values
 
+        elif isinstance(x, (pl.DataFrame, pl.LazyFrame)):
+            category_values = _one_column_series(x)
+
+        else:
+            raise ValueError(
+                "Categories cannot be inferred from a column "
+                "name or expression alone.\n"
+                "Provide `categories`, `f.select('x')`, or "
+                "`f.pull('x')`."
+            )
+
+        categories = _clean_enum_values(category_values).unique().sort()
+
+    else:
+        category_values = _one_column_series(categories)
+
+        # Explicit Python iterables preserve their supplied order.
+        if isinstance(categories, (pl.Series, pl.DataFrame, pl.LazyFrame)):
+            categories = _clean_enum_values(category_values).unique().sort()
+        else:
+            categories = _clean_enum_values(category_values).unique(maintain_order=True)
+
+    if reverse:
+        categories = categories.reverse()
+
+    # ---------------------------------------------------------
+    # Produce Series or expression
+    # ---------------------------------------------------------
+
+    enum_dtype = pl.Enum(categories)
+
+    if returns_series:
+        if values.dtype.is_float():
+            values = values.fill_nan(None)
+
+        return values.cast(pl.String).cast(enum_dtype)
+
+    return _col_expr(column_name).cast(pl.String).cast(enum_dtype)
 
 def as_factor(x):
     """
@@ -1159,3 +1215,37 @@ def var(x):
     """
     x = _col_expr(x)
     return x.var()
+
+##---------------------##
+## private helper funs ##
+##---------------------##
+
+def _clean_enum_values(values: pl.Series) -> pl.Series:
+    """Convert values to non-null strings suitable for Enum categories."""
+    if values.dtype.is_float():
+        values = values.drop_nans()
+
+    return values.drop_nulls().cast(pl.String)
+
+
+def _one_column_series(x) -> pl.Series:
+    """Convert a Series or one-column frame to a Series."""
+    if isinstance(x, pl.LazyFrame):
+        x = x.collect()
+
+    if isinstance(x, pl.DataFrame):
+        if x.width != 1:
+            raise ValueError(
+                "Expected a one-column frame, "
+                f"but received {x.width} columns"
+            )
+
+        return x.to_series()
+
+    if isinstance(x, pl.Series):
+        return x
+
+    if _is_iterable(x):
+        return pl.Series(x)
+
+    raise TypeError("Expected a Series, iterable, or one-column frame")

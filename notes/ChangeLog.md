@@ -1,3 +1,7 @@
+# 0.5.3
++ Fix bugs of `slice_head` and `slice_tail`'s behaviours
++ Enhance `tp.as_enum` and `tp.as_ordered` so that they can be used like `series = tp.as_enum(series)`
+
 # 0.5.2
 + Make `as_enum` and `as_ordered` handle duplicates `categories`
 
