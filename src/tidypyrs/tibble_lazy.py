@@ -1011,10 +1011,11 @@ class TibbleLazy(pl.LazyFrame):
         >>> tl.slice_head(2)
         >>> tl.slice_head(1, over='c')
         """
+        tl = self.as_polars()
         if _uses_over(over):
-            tl = super().select(pl.all().head(n).over(over, mapping_strategy="explode"))
+            tl = tl.select(pl.all().head(n).over(over, mapping_strategy="explode"))
         else:
-            tl = super().head(n)
+            tl = tl.head(n)
         return tl.pipe(_from_polars_lazy)
 
     def slice_tail(self, n=5, *, over=None):
@@ -1034,10 +1035,11 @@ class TibbleLazy(pl.LazyFrame):
         >>> tl.slice_tail(2)
         >>> tl.slice_tail(1, over='c')
         """
+        tl = self.as_polars()
         if _uses_over(over):
-            tl = super().select(pl.all().tail(n).over(over, mapping_strategy="explode"))
+            tl = tl.select(pl.all().tail(n).over(over, mapping_strategy="explode"))
         else:
-            tl = super().tail(n)
+            tl = tl.tail(n)
         return tl.pipe(_from_polars_lazy)
 
     def summarise(self, *args, **kwargs):

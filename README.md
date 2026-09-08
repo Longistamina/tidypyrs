@@ -185,7 +185,6 @@ This pushes `polars.col()` one step further from a mere column expression.
 This feature is inspired by [datar](#https://github.com/pwwang/datar) library.
 ```python
 import tidypyrs as tp
-import polars as pl
 from tidypyrs import f
 import numpy as np
 
@@ -195,11 +194,24 @@ import numpy as np
 
 tf = (
     tp.TibbleFrame(y=["b", "a", "b"])
-    .mutate(y=tp.as_ordered(f.select("y")))
+    .mutate(
+        y = tp.as_ordered(f.select("y"))
+    )
     # Don't need to call `.pipe(lambda f: f.mutate(y = tp.as_ordered(f.select("y"))))`
 )
 
 print(isinstance(tf.pull("y").dtype, pl.Enum))  # True
+
+# ====================================================
+# Example with f("x").pipe(tp.as_enum, f.pull("x"))
+# ====================================================
+
+tf = (
+    tp.TibbleFrame(x=["b", "a", "b"])
+    .mutate(
+        f("x").pipe(tp.as_enum, f.pull("x")).alias("x_enum")
+    )
+)
 
 # ================================
 # Example with numpy functions
@@ -210,6 +222,48 @@ tf = (
     .mutate(
         x_root=np.sqrt(f["x"]), 
         x_sin=np.sin(f.x)
+    )
+)
+```
+
+### `tp.as_enum` and `tp.as_ordered` for convenient converting to Enum
+```python
+import tidypyrs as tp
+from tidypyrs import f
+
+# =========================
+# Example with Series
+# =========================
+
+s = tp.Series([1, 2, 3, None, 5, 4, 4, 3, 1, 2])
+s_enum = tp.as_enum(s, categories=None) # resolve categories internally
+s_ordered = tp.as_enum(s, categories=[1, 2, 3, 4, 5])
+
+# ========================================
+# Example with TibbleFrame/TibbleLazy
+# ========================================
+
+# Use with `f.select("col")`
+tf = (
+    tp.TibbleFrame(y=["b", "a", "b"])
+    .mutate(
+        y = tp.as_ordered(f.select("y"))
+    )
+)
+
+# Use with `pipe`
+tf = (
+    tp.TibbleFrame(x=["b", "a", "b"])
+    .mutate(
+        f("x").pipe(tp.as_enum, f.pull("x")).alias("x_enum")
+    )
+)
+
+# Use with known categories
+tf = (
+    tp.TibbleFrame(x=["b", "a", "b"])
+    .mutate(
+        f("x").pipe(tp.as_enum, ["a", "b"]).alias("x_enum")
     )
 )
 ```

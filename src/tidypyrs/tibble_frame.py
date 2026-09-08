@@ -1034,10 +1034,11 @@ class TibbleFrame(pl.DataFrame):
         >>> tf.slice_head(2)
         >>> tf.slice_head(1, over='c')
         """
+        tf = self.as_polars()
         if _uses_over(over):
-            tf = super().select(pl.all().head(n).over(over, mapping_strategy="explode"))
+            tf = tf.select(pl.all().head(n).over(over, mapping_strategy="explode"))
         else:
-            tf = super().head(n)
+            tf = tf.head(n)
         return tf.pipe(_from_polars_frame)
 
     def slice_tail(self, n=5, *, over=None):
@@ -1057,10 +1058,11 @@ class TibbleFrame(pl.DataFrame):
         >>> tf.slice_tail(2)
         >>> tf.slice_tail(1, over='c')
         """
+        tf = self.as_polars()
         if _uses_over(over):
-            tf = super().select(pl.all().tail(n).over(over, mapping_strategy="explode"))
+            tf = tf.select(pl.all().tail(n).over(over, mapping_strategy="explode"))
         else:
-            tf = super().tail(n)
+            tf = tf.tail(n)
         return tf.pipe(_from_polars_frame)
 
     def summarise(self, *args, **kwargs):
