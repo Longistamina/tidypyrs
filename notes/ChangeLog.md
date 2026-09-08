@@ -1,3 +1,6 @@
+# 0.6.0
++ Add `row_index` method for both TibbleFrame and TibbleLazy as a wrapper of polars `with_row_index`
+
 # 0.5.3
 + Fix bugs of `slice_head` and `slice_tail`'s behaviours
 + Enhance `tp.as_enum` and `tp.as_ordered` so that they can be used like `series = tp.as_enum(series)`

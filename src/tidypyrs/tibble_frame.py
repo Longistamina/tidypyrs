@@ -1131,6 +1131,46 @@ class TibbleFrame(pl.DataFrame):
             out = out.drop(unite_cols)
         return out
 
+    def row_index(self, name: str = "index", offset: int = 0):
+        """
+        A wrapper of `polars.DataFrame.with_row_index()`
+
+        Add a row index as the first column in the DataFrame.
+
+        Parameters
+        ----------
+        name
+            Name of the index column.
+        offset
+            Start the index at this offset. Cannot be negative.
+
+        Notes
+        -----
+        The resulting column does not have any special properties. It is a regular
+        column of type `UInt32` (or `UInt64` in `polars[rt64]`).
+
+        Examples
+        --------
+        >>> tf = tp.TibbleFrame(
+        ...     {
+        ...         "a": [1, 3, 5],
+        ...         "b": [2, 4, 6],
+        ...     }
+        ... )
+        >>> tf.row_index()
+        shape: (3, 3)
+        ┌───────┬─────┬─────┐
+        │ index ┆ a   ┆ b   │
+        │ ---   ┆ --- ┆ --- │
+        │ u32   ┆ i64 ┆ i64 │
+        ╞═══════╪═════╪═════╡
+        │ 0     ┆ 1   ┆ 2   │
+        │ 1     ┆ 3   ┆ 4   │
+        │ 2     ┆ 5   ┆ 6   │
+        └───────┴─────┴─────┘
+        """
+        return super().with_row_index(name, offset).pipe(_from_polars_frame)
+
     def write_csv(self, file=None, has_headers=True, sep=","):
         """Write a data frame to a csv"""
         return super().write_csv(file, include_header=has_headers, separator=sep)
@@ -1305,4 +1345,5 @@ _polars_methods = [
     "with_columns",
     "with_column_renamed",
     "with_columns",
+    "with_row_index"
 ]
