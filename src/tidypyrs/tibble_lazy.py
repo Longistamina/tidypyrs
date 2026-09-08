@@ -1108,6 +1108,51 @@ class TibbleLazy(pl.LazyFrame):
             out = out.drop(unite_cols)
         return out
 
+    def row_index(self, name: str = "index", offset: int = 0):
+        """
+        A wrapper of `polars.DataFrame.with_row_index()`
+
+        Add a row index as the first column in the DataFrame.
+
+        Parameters
+        ----------
+        name
+            Name of the index column.
+        offset
+            Start the index at this offset. Cannot be negative.
+
+        Warnings
+        --------
+        Using this function can have a negative effect on query performance.
+        This may, for instance, block predicate pushdown optimization.
+
+        Notes
+        -----
+        The resulting column does not have any special properties. It is a regular
+        column of type `UInt32` (or `UInt64` in `polars[rt64]`).
+
+        Examples
+        --------
+        >>> tl = tp.TibbleLazy(
+        ...     {
+        ...         "a": [1, 3, 5],
+        ...         "b": [2, 4, 6],
+        ...     }
+        ... )
+        >>> tl.row_index().collect()
+        shape: (3, 3)
+        ┌───────┬─────┬─────┐
+        │ index ┆ a   ┆ b   │
+        │ ---   ┆ --- ┆ --- │
+        │ u32   ┆ i64 ┆ i64 │
+        ╞═══════╪═════╪═════╡
+        │ 0     ┆ 1   ┆ 2   │
+        │ 1     ┆ 3   ┆ 4   │
+        │ 2     ┆ 5   ┆ 6   │
+        └───────┴─────┴─────┘
+        """
+        return super().with_row_index(name, offset).pipe(_from_polars_lazy)
+
     @property
     def colnames(self):
         """
@@ -1243,4 +1288,5 @@ _polars_methods = [
     "with_columns",
     "with_column_renamed",
     "with_columns",
+    "with_row_index"
 ]
