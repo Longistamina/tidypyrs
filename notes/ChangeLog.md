@@ -1,3 +1,6 @@
+# 0.6.3
++ Convert `tp.Utf8` into `tp.String`
+
 # 0.6.2
 + Make `glimpse` method accept positional argument
 
