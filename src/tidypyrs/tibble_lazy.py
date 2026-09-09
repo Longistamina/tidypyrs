@@ -861,26 +861,55 @@ class TibbleLazy(pl.LazyFrame):
 
         return self.select(final_order)
 
-    def rename(self, mapping=None, **kwargs):
+    def rename(
+        self,
+        mapping: Mapping[str, str] | Callable[[str], str] | None = None,
+        *,
+        strict: bool = True,
+        **kwargs: str,
+    ):
         """
-        Rename columns
+        Rename columns.
 
         Parameters
         ----------
-        mapping : dict
-            Dictionary mapping of new names or a Callable function like lambda
+        mapping : Mapping[str, str] or Callable[[str], str], optional
+            Native Polars interface. Mapping keys are existing column names
+            and values are new column names. A callable receives each existing
+            column name and returns its new name.
+
+        strict : bool, default True
+            Raise an exception if a mapping key does not exist in the schema.
+            This has no effect when ``mapping`` is a callable.
+
         **kwargs : str
-            key-value pair of new name from old name
+            Tidyverse interface, written as ``new_name="old_name"``.
 
         Examples
         --------
-        >>> tl = tp.TibbleLazy({'x': range(3), 't': range(3), 'z': ['a', 'a', 'b']})
-        >>> tl.rename(new_x = 'x') # dplyr interface
-        >>> tl.rename({'x': 'new_x'}) # pandas interface
+        >>> tf = tp.TibbleFrame(
+        ...     {"x": range(3), "t": range(3), "z": ["a", "a", "b"]}
+        ... )
+        >>> tf.rename(new_x="x")
+        >>> tf.rename({"x": "new_x"})
+        >>> tf.rename(lambda name: name.upper())
         """
+        if mapping is not None and kwargs:
+            raise TypeError("Use either `mapping` or keyword renames, not both.")
+
         if mapping is None:
-            mapping = {value: key for key, value in kwargs.items()}
-        return super().rename(mapping).pipe(_from_polars_lazy)
+            old_names = list(kwargs.values())
+
+            if len(old_names) != len(set(old_names)):
+                raise ValueError("A source column cannot be renamed more than once.")
+
+            # Convert new_name="old_name" into {"old_name": "new_name"}.
+            mapping = {
+                old_name: new_name
+                for new_name, old_name in kwargs.items()
+            }
+
+        return super().rename(mapping, strict=strict).pipe(_from_polars_lazy)
 
     def replace_null(self, replace=None):
         """

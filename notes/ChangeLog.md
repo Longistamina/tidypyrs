@@ -1,3 +1,6 @@
+# 0.6.4
++ Enhance `rename` method behaviour with `strict` parameter
+
 # 0.6.3
 + Convert `tp.Utf8` into `tp.String`
 
