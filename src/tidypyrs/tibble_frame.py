@@ -330,14 +330,33 @@ class TibbleFrame(pl.DataFrame):
         other = other.as_polars()
         return tf.equals(other, null_equal=null_equal)
 
-    def glimpse(self):
+    def glimpse(
+        self,
+        max_items_per_column: int = 5,
+        max_colname_length: int = 50,
+        return_type = None
+    ):
         """
         Return a dense preview of the DataFrame.
 
         The formatting shows one line per column so that wide dataframes display cleanly.
         Each line shows the column name, the data type, and the first few values.
+
+        Parameters:
+            max_items_per_column
+                Maximum number of items to show per column.
+
+            max_colname_length
+                Maximum length of the displayed column names; values that exceed this value are truncated with a trailing ellipsis.
+
+            return_type
+                Modify the return format:
+                + None (default): Print the glimpse output to stdout, returning None.
+                + "self": Print the glimpse output to stdout, returning the original frame.
+                + "frame": Return the glimpse output as a new DataFrame.
+                + "string": Return the glimpse output as a string.
         """
-        return self.as_polars().glimpse()
+        return self.as_polars().glimpse(max_items_per_column, max_colname_length, return_type)
 
     def group_by(self, *by, maintain_order: bool = False, **named_by):
         """

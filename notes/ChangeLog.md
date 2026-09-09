@@ -1,3 +1,6 @@
+# 0.6.1
++ Add parameters to `glimpse` method
+
 # 0.6.0
 + Add `row_index` method for both TibbleFrame and TibbleLazy as a wrapper of polars `with_row_index`
 
