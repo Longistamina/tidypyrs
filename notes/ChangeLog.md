@@ -1,3 +1,6 @@
+# 0.6.2
++ Make `glimpse` method accept positional argument
+
 # 0.6.1
 + Add parameters to `glimpse` method
 

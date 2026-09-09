@@ -356,7 +356,11 @@ class TibbleFrame(pl.DataFrame):
                 + "frame": Return the glimpse output as a new DataFrame.
                 + "string": Return the glimpse output as a string.
         """
-        return self.as_polars().glimpse(max_items_per_column, max_colname_length, return_type)
+        return self.as_polars().glimpse(
+            max_items_per_column=max_items_per_column,
+            max_colname_length=max_colname_length,
+            return_type=return_type
+        )
 
     def group_by(self, *by, maintain_order: bool = False, **named_by):
         """
