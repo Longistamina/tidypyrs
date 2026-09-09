@@ -25,7 +25,7 @@ __all__ = [  # noqa: RUF022
     "Float32",
     "Float64",
     "Boolean",
-    "Utf8",
+    "String",
     "List",
     "Date",
     "Datetime",
@@ -64,7 +64,7 @@ Float32 = pl.Float32
 Float64 = pl.Float64
 Boolean = pl.Boolean
 
-Utf8 = pl.Utf8
+String = pl.String
 
 List = pl.List
 
