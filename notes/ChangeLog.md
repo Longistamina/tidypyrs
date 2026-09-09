@@ -1,3 +1,6 @@
+# 0.6.5
++ Import `Callable` and `Mapping` in TibbleLazy
+
 # 0.6.4
 + Enhance `rename` method behaviour with `strict` parameter
 

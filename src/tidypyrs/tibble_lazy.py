@@ -1,5 +1,6 @@
 import copy
 import functools as ft
+from collections.abc import Callable, Mapping
 from datetime import timedelta
 from operator import and_, not_
 
