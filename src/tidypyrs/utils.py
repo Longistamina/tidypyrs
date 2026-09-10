@@ -149,12 +149,21 @@ def _lit_expr(x):
 # ======================================================
 
 
-def _mutate_cols(frame, exprs):
-    for expr in exprs:
-        if isinstance(expr, _Deferred):
-            expr = expr.resolve(frame)
+def _mutate_cols(frame, exprs, over, parallel):
 
-        frame = frame.with_columns(expr)
+    if parallel:
+        exprs = [
+            expr.resolve(frame) if isinstance(expr, _Deferred) else expr
+            for expr in exprs
+        ]
+        exprs = _over_exprs(exprs, over)
+        frame = frame.with_columns(*exprs)
+
+    else:
+        for expr in exprs:
+            expr = expr.resolve(frame) if isinstance(expr, _Deferred) else expr
+            expr = _over_exprs([expr], over)[0]
+            frame = frame.with_columns(expr)
 
     return frame
 

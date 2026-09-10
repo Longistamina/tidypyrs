@@ -674,32 +674,56 @@ class TibbleFrame(pl.DataFrame):
             on = list(set(self.colnames) & set(tf.colnames))
         return super().join(tf, on, "left", left_on=left_on, right_on=right_on, suffix=suffix).pipe(_from_polars_frame)
 
-    def mutate(self, *args, over=None, **kwargs):
+    def mutate(self, *args, over=None, parallel=True, **kwargs):
         """
-        Add or modify columns
+        Add or modify columns.
 
         Parameters
         ----------
         *args : Expr
-            Column expressions to add or modify
-        by : str, list
-            Columns to group by
+            Column expressions to add or modify.
+
+        over : str or list, optional
+            Columns over which expressions are evaluated.
+
+        parallel : bool, default True
+            Evaluate all expressions in parallel against the original frame.
+
+            Set this to False when a later expression depends on a column
+            created earlier in the same ``mutate()`` call.
+
         **kwargs : Expr
-            Column expressions to add or modify
+            Named column expressions to add or modify.
+
+        Notes
+        -----
+        With ``parallel=True``, every expression sees the frame as it existed
+        before ``mutate()`` began. This is generally faster but means that one
+        expression cannot use a column created by another expression in the
+        same call.
+
+        Use ``parallel=False`` to evaluate expressions from left to right.
+        Each expression will then see columns created by earlier expressions.
 
         Examples
         --------
-        >>> tf = tp.TibbleFrame({'a': range(3), 'b': range(3), c=['a', 'a', 'b']})
+        Create independent columns in parallel:
+
         >>> tf.mutate(
-        ...     double_a = col('a') * 2,
-        ...     a_plus_b = col('a') + col('b')
+        ...     double_a=tp.col("a") * 2,
+        ...     a_plus_b=tp.col("a") + tp.col("b"),
         ... )
-        >>> tf.mutate(row_num = row_number(), over='c')
+
+        Evaluate dependent expressions sequentially:
+
+        >>> tf.mutate(
+        ...     double_a=tp.col("a") * 2,
+        ...     quadruple_a=tp.col("double_a") * 2,
+        ...     parallel=False,
+        ... )
         """
         exprs = _as_list(args) + _kwargs_as_exprs(kwargs)
-        exprs = _over_exprs(exprs, over)
-
-        out = _mutate_cols(self.as_polars(), exprs)
+        out = _mutate_cols(frame=self.as_polars(), exprs=exprs, over=over, parallel=parallel)
         return out.pipe(_from_polars_frame)
 
     def pipe(self, function, *args, **kwargs):

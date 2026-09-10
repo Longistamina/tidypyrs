@@ -1,3 +1,6 @@
+# 0.6.6
++ Enable `mutate` to run in both modes `parallel=True` and `parallel=False` 
+
 # 0.6.5
 + Import `Callable` and `Mapping` in TibbleLazy
 
