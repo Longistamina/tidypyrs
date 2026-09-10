@@ -2572,7 +2572,7 @@ wheels = [
 
 [[package]]
 name = "tidypyrs"
-version = "0.6.5"
+version = "0.6.6"
 source = { editable = "." }
 dependencies = [
     { name = "polars" },
