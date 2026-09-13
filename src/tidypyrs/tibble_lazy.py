@@ -17,7 +17,7 @@ from .utils import (
     _is_string,
     _kwargs_as_exprs,
     _mutate_cols,
-    _over_exprs,
+    _select_cols,
     _uses_over,
 )
 
@@ -33,12 +33,49 @@ class TibbleLazy(pl.LazyFrame):
     A lazy data frame object that provides methods familiar to R tidyverse users.
     """
 
-    def __init__(self, _data=None, **kwargs):
-        if len(kwargs) > 0:
-            _data = kwargs
-        elif not_(isinstance(_data, dict)):
-            raise ValueError("_data must be a dictionary or kwargs must be used")
-        super().__init__(_data)
+    def __init__(
+        self,
+        _data=None,
+        *,
+        schema=None,
+        schema_overrides=None,
+        orient=None,
+        infer_schema_length=100,
+        nan_to_null=False,
+        **columns,
+    ):
+        """
+        Construct a TibbleLazy.
+
+        Data can be provided either as a dictionary:
+        >>> TibbleLazy({"x": [1, 2], "y": ["a", "b"]})
+
+        or as keyword columns:
+        >>> TibbleLazy(x=[1, 2], y=["a", "b"])
+        """
+        if _data is not None and columns:
+            raise TypeError(
+                "Provide data using either `_data` or keyword columns, not both."
+            )
+
+        if columns:
+            _data = columns
+        elif _data is None:
+            _data = {}
+        elif not isinstance(_data, dict):
+            raise TypeError(
+                "`_data` must be a dictionary. "
+                "Alternatively, provide columns as keyword arguments."
+            )
+
+        super().__init__(
+            _data,
+            schema=schema,
+            schema_overrides=schema_overrides,
+            orient=orient,
+            infer_schema_length=infer_schema_length,
+            nan_to_null=nan_to_null,
+        )
 
     def __dir__(self):
         _TibbleLazy_methods = [
@@ -63,6 +100,7 @@ class TibbleLazy(pl.LazyFrame):
             "group_by_dynamic",
             "inner_join",
             "left_join",
+            "map_batches",
             "mutate",
             "full_join",
             "pipe",
@@ -198,11 +236,10 @@ class TibbleLazy(pl.LazyFrame):
         """Very cheap deep clone"""
         return super().clone().pipe(_from_polars_lazy)
 
-    def collect(self, engine="auto"):
+    def collect(self, engine="auto", **kwargs):
         "Collect the TibbleLazy with selected engine and return TibbleFrame"
         from tidypyrs.tibble_frame import _from_polars_frame
-
-        return super().collect(engine=engine).pipe(_from_polars_frame)
+        return super().collect(engine=engine, **kwargs).pipe(_from_polars_frame)
 
     def count(self, *args, sort=False, name="n"):
         """
@@ -617,6 +654,34 @@ class TibbleLazy(pl.LazyFrame):
             on = list(set(self.colnames) & set(tl.colnames))
         return super().join(tl, on, "left", left_on=left_on, right_on=right_on, suffix=suffix).pipe(_from_polars_lazy)
 
+    def map_batches(
+        self,
+        function,
+        *,
+        predicate_pushdown=False,
+        projection_pushdown=False,
+        slice_pushdown=False,
+        schema=None,
+        validate_output_schema=True,
+        streamable=False,
+    ):
+        """
+        Apply a DataFrame-to-DataFrame function within the lazy query.
+
+        The function must be pure and must return a Polars DataFrame.
+        If it changes the schema, provide the resulting ``schema``.
+        """
+        out = super().map_batches(
+            function,
+            predicate_pushdown=predicate_pushdown,
+            projection_pushdown=projection_pushdown,
+            slice_pushdown=slice_pushdown,
+            schema=schema,
+            validate_output_schema=validate_output_schema,
+            streamable=streamable,
+        )
+        return out.pipe(_from_polars_lazy)
+
     def mutate(self, *args, over=None, parallel=True, **kwargs):
         """
         Add or modify columns.
@@ -1004,7 +1069,7 @@ class TibbleLazy(pl.LazyFrame):
         rename_dict = {k: v for k, v in zip(self.colnames, nm)}
         return self.rename(rename_dict)
 
-    def select(self, *args):
+    def select(self, *args, **kwargs):
         """
         Select or drop columns
 
@@ -1019,9 +1084,9 @@ class TibbleLazy(pl.LazyFrame):
         >>> tl.select('a', 'b')
         >>> tl.select(col('a'), col('b'))
         """
-        args = _as_list(args)
-        args = _col_exprs(args)
-        return super().select(args).pipe(_from_polars_lazy)
+        exprs = _as_list(args) + _kwargs_as_exprs(kwargs)
+        out = _select_cols(frame=self.as_polars(), exprs=exprs)
+        return out.pipe(_from_polars_lazy)
 
     def slice(self, *args, over=None):
         """

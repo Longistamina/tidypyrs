@@ -169,6 +169,26 @@ def _mutate_cols(frame, exprs, over, parallel):
 
 
 # ======================================================
+# Select columns with given dataframe and expressions
+# ======================================================
+
+
+def _select_cols(frame, exprs):
+    resolved_exprs = []
+
+    for expr in exprs:
+        if isinstance(expr, _Deferred):
+            expr = expr.resolve(frame)
+
+        if _is_series(expr) and expr.dtype == pl.String:
+            resolved_exprs.extend(expr.to_list())
+        else:
+            resolved_exprs.append(expr)
+
+    return frame.select(*resolved_exprs)
+
+
+# ======================================================
 # Column expression related utilities
 # ======================================================
 

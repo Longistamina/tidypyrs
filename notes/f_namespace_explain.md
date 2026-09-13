@@ -32,6 +32,7 @@ tp.TibbleFrame(
     lambda tf: tf.mutate(
         copied=tp.col("y"),
         ordered=tp.as_enum(tf.select("copied")),
+        parallel=False
     )
 )
 ```
@@ -44,6 +45,7 @@ tp.TibbleFrame(
 ).mutate(
     copied=tp.col("y"),
     ordered=tp.as_enum(f.select("copied")),
+    parallel=False
 )
 ```
 
@@ -51,11 +53,13 @@ The `f` namespace provides two related families of features:
 
 1. immediate Polars expressions such as `f["x"]`, `f.x`, `f("x")`, and
    `f.all()`;
-2. deferred frame operations such as `f.select("x")` and `f.pull("x")`.
+2. deferred frame operations and metadata such as `f.select("x")`,
+   `f.pull("x")`, and `f.colnames`.
 
 The second family is why `_Deferred` is necessary. `f.select()` needs the
 future frame in order to return another frame, while `f.pull()` needs it in
-order to extract concrete column values as a `Series`.
+order to extract concrete column values as a `Series`. `f.colnames` similarly
+needs the future frame before it can obtain that frame's column names.
 
 \##---------------------------------------------------------------------------   
 \## 2. Why the current frame is unavailable   
@@ -110,8 +114,8 @@ f = _FrameReference()
 ```
 
 The class defines what operations such as `f["x"]`, `f.x`, `f("x")`,
-`f.all()`, `f.select("x")`, and `f.pull("x")` mean. The final line creates one
-public instance named `f`.
+`f.all()`, `f.colnames`, `f.select("x")`, and `f.pull("x")` mean. The final
+line creates one public instance named `f`.
 
 After this assignment, `f` is no longer unknown or undefined. Python knows
 that it is an instance of `_FrameReference` and can look up the behavior
@@ -238,6 +242,27 @@ actually resolved, after both modules have finished initializing.
 Both `select()` and `pull()` are where `_FrameReference` connects to
 `_Deferred`.
 
+`f.colnames` creates another frame-dependent recipe:
+```python
+@property
+def colnames(self):
+    from .funs import from_polars
+
+    return _Deferred(
+        lambda frame: from_polars(frame).colnames
+    )
+```
+
+It resolves to the `pl.Series` returned by the current Tidypyrs frame's
+`colnames` property. Keeping this result as a Series allows Series operations
+to be composed before the names are used, for example:
+```python
+f.colnames[::2]
+f.colnames.sort()
+```
+
+As with `pull()`, the local import avoids a module-level circular import.
+
 \##----------------------------------------------------------------------------------   
 \## 5. The idea of deferred work   
 \##-----------------------------------------------------------------------------------   
@@ -298,6 +323,14 @@ columns before the recipe is resolved. `f.pull()` therefore means "pull the
 last column of the frame at resolution time", not necessarily the last column
 of the original input frame.
 
+`f.colnames` records a related metadata recipe:
+```python
+lambda frame: from_polars(frame).colnames
+```
+
+It does not read data values from a column. It waits for the current frame and
+then returns that frame's column-name Series.
+
 \##-----------------------------------------------------------------------------------------------------   
 \## 6. `_Deferred`: storing and resolving the recipe   
 \##-----------------------------------------------------------------------------------------------------   
@@ -341,8 +374,8 @@ is not essential to deferred execution itself.
 
 The stored recipe is executed by `resolve()`:
 ```python
-def resolve(self, frame):
-    return self._resolver(frame)
+def resolve(self, object):
+    return self._resolver(object)
 ```
 
 Therefore:
@@ -359,77 +392,122 @@ Before `resolve()`, the object contains only a recipe. During `resolve()`,
 the true current frame is supplied and the selection finally runs.
 
 \##-----------------------------------------------------------------------------------------------------   
-\## 7. `map()` composes another deferred operation   
+\## 7. `_Deferred` automatically forwards indexing, attributes, and method calls   
 \##-----------------------------------------------------------------------------------------------------   
 
-Selecting a column is only the first step. In our example, the selected frame
-must later be passed into `as_enum()`.
-
-`_Deferred.map()` adds another operation without executing the existing one:
+Storing and resolving one recipe is sufficient for `f.select("y")`, but users
+also need to continue operating on values that do not exist yet. For example:
 ```python
-def map(self, function):
+f.colnames[::2]
+f.colnames.sort()
+```
+
+It would be impractical to add a separate `_Deferred.sort()`,
+`_Deferred.reverse()`, `_Deferred.head()`, and so on for every possible method.
+Instead, `_Deferred` implements Python's indexing, attribute-access, and call
+protocols generically.
+
+### Deferred indexing with `__getitem__`
+
+When Python sees:
+```python
+f.colnames[::2]
+```
+
+the left side is still `_Deferred`, so Python calls its `__getitem__()`:
+```python
+def __getitem__(self, key):
     return _Deferred(
-        lambda frame: function(self.resolve(frame))
+        lambda object: self.resolve(object)[key]
     )
 ```
 
-Suppose the first deferred object is:
+This does not perform the slice immediately. It creates a new recipe that will:
+
+1. resolve the earlier recipe against the supplied frame;
+2. obtain the real column-name Series;
+3. apply `[::2]` to that Series.
+
+Conceptually:
 ```python
-d0 = _Deferred(
-    lambda frame: frame.select("y")
-)
+lambda frame: from_polars(frame).colnames[::2]
 ```
 
-In this demonstration, let's use `as_enum()`:
+### Deferred attribute access with `__getattr__`
+
+When Python evaluates:
 ```python
-d1 = d0.map(
-    lambda selected: as_enum(selected)
-)
+f.colnames.sort
 ```
 
-Conceptually, `d1` stores:
+`_Deferred` has no concrete `sort` attribute. Python therefore calls:
 ```python
-d1 = _Deferred(
-    lambda frame: as_enum(
-        d0.resolve(frame)
+def __getattr__(self, name):
+    if name.startswith("_"):
+        raise AttributeError(name)
+
+    return _Deferred(
+        lambda object: getattr(self.resolve(object), name)
     )
-)
 ```
 
-Its expanded meaning is:
+The resulting recipe first resolves `f.colnames` and then retrieves the real
+Series object's `sort` attribute. At that point the result is a bound method,
+but it has still not been invoked.
+
+Names beginning with `_` are rejected so that Python's internal/private
+attribute lookups do not accidentally become deferred public operations.
+
+### Deferred method calls with `__call__`
+
+The parentheses in:
 ```python
-lambda frame: as_enum(
-    frame.select("y")
-)
+f.colnames.sort()
 ```
 
-Nothing has executed yet. Execution begins only when we call:
+then call `_Deferred.__call__()`. Its resolver obtains the previously deferred
+bound method, resolves any deferred positional and keyword arguments against
+the same object, and finally invokes the method:
 ```python
-d1.resolve(current_frame)
+def __call__(self, *args, **kwargs):
+    def resolver(object):
+        function = self.resolve(object)
+
+        resolved_args = [
+            arg.resolve(object) if isinstance(arg, _Deferred) else arg
+            for arg in args
+        ]
+
+        resolved_kwargs = {
+            key: value.resolve(object)
+            if isinstance(value, _Deferred)
+            else value
+            for key, value in kwargs.items()
+        }
+
+        return function(*resolved_args, **resolved_kwargs)
+
+    return _Deferred(resolver)
 ```
 
-Then the steps are:
+The complete meaning of `f.colnames.sort()` is therefore approximately:
 ```python
-current_frame.select("y")
-    -> as_enum(current_frame.select("y"))
+lambda frame: from_polars(frame).colnames.sort()
 ```
 
-`d0` and `d1` are distinct `_Deferred` objects, but they are not
-completely independent. The resolver stored by `d1` deliberately closes over
-`d0` and calls `d0.resolve(frame)`.
+This generic mechanism also handles normal arguments, keyword arguments, and
+other deferred arguments. No `map()` method is needed: every additional step
+constructs a new `_Deferred` whose resolver calls the preceding resolver.
 
-Their responsibilities are:
-```
-d0: select the column from the future frame
-d1: select the column, then convert it into an Enum expression
+The successive objects still form a composition:
+```text
+d0: obtain the future frame's column-name Series
+d1: obtain that Series' bound sort method
+d2: call the bound method
 ```
 
-`map()` remains a useful primitive for transforming the result of one deferred
-operation. It is also used by `_Deferred.alias()`. However, the generalized
-`_defer_aware` decorator below does not use `map()`, because it may need to
-resolve several independent deferred positional and keyword arguments against
-the same frame. In that situation it constructs one new `_Deferred` resolver
-that has access to the frame directly.
+None of these recipes executes until a compatible Tidypyrs verb supplies the
+current frame and calls `resolve()`.
 
 \##-----------------------------------------------------------------------------------------------------   
 \## 8. `functools.wraps`, `_defer_aware`, and `as_enum()`   
@@ -463,36 +541,24 @@ def _defer_aware(function):
     def wrapper(*args, **kwargs):
         has_deferred = (
             any(isinstance(arg, _Deferred) for arg in args)
-            or any(
-                isinstance(value, _Deferred)
-                for value in kwargs.values()
-            )
+            or any(isinstance(value, _Deferred) for value in kwargs.values())
         )
 
         if not has_deferred:
             return function(*args, **kwargs)
 
-        def resolver(frame):
+        def resolver(object):
             resolved_args = tuple(
-                arg.resolve(frame)
-                if isinstance(arg, _Deferred)
-                else arg
+                arg.resolve(object) if isinstance(arg, _Deferred) else arg
                 for arg in args
             )
 
             resolved_kwargs = {
-                key: (
-                    value.resolve(frame)
-                    if isinstance(value, _Deferred)
-                    else value
-                )
+                key: value.resolve(object) if isinstance(value, _Deferred) else value
                 for key, value in kwargs.items()
             }
 
-            return function(
-                *resolved_args,
-                **resolved_kwargs,
-            )
+            return function(*resolved_args, **resolved_kwargs)
 
         return _Deferred(resolver)
 
@@ -610,28 +676,55 @@ Both recipes receive the identical current frame during resolution.
 
 ### Applying `_defer_aware` to `as_enum()`
 
-The function is now written normally, with no deferred branch inside its body:
+The function is written normally, with no `_Deferred` branch inside its body.
+Its first decision is whether `x` contains concrete values:
 ```python
 @_defer_aware
-def as_enum(x, categories=None, reverse=False):
-    if categories is None:
-        if isinstance(x, pl.DataFrame):
-            ...
-        elif isinstance(x, pl.LazyFrame):
-            ...
-        else:
-            raise ValueError(...)
-
-    ...
-
-    return (
-        pl.col(x)
-        .cast(pl.String)
-        .cast(pl.Enum(categories))
+def as_enum(x, categories=None, reverse: bool = False):
+    returns_series = (
+        isinstance(x, pl.Series)
+        or (
+            _is_iterable(x)
+            and not isinstance(x, (pl.DataFrame, pl.LazyFrame))
+        )
     )
+    ...
 ```
 
-For a normal input:
+The supported forms fall into two output families:
+
+```text
+Series or Python iterable
+    -> concrete values
+    -> return pl.Series with Enum dtype
+
+column name, pl.Expr, DataFrame, or LazyFrame
+    -> identify a frame column
+    -> return pl.Expr casting that column to Enum
+```
+
+`_one_column_series()` normalizes concrete category sources. It accepts a
+Series, Python iterable, or one-column eager/lazy frame. A LazyFrame must be
+collected here because a Polars Enum dtype requires its concrete category set
+when the dtype is constructed. Both frame inputs are validated to contain
+exactly one column.
+
+`_clean_enum_values()` removes nulls, removes NaNs from floating-point values,
+and casts the remaining values to strings. Category order then depends on how
+the categories were supplied:
+
+- inferred categories are made unique and sorted;
+- an explicit Series, DataFrame, or LazyFrame is treated as observed data, so
+  its unique categories are sorted;
+- an explicit Python iterable is treated as an intentional category order, so
+  duplicates are removed with `maintain_order=True`;
+- `reverse=True` reverses the resulting order after cleaning.
+
+Finally, `pl.Enum(categories)` is constructed. Concrete `x` values are cast
+and returned as a Series; symbolic/frame-based `x` is converted through
+`_col_expr()` and returned as an expression.
+
+For a normal eager input:
 ```python
 tp.as_enum(tf.select("y"))
 ```
@@ -641,6 +734,16 @@ keyword arguments are deferred, the wrapper immediately calls the original
 function:
 ```python
 return function(*args, **kwargs)
+```
+
+The original function validates that the frame contains one column, extracts
+that column's observed values with `_one_column_series()`, infers sorted unique
+categories, and returns an Enum-cast expression targeting the selected
+column. A concrete Series or iterable follows the immediate path too, but
+returns an Enum Series instead:
+```python
+tp.as_enum(pl.Series("y", ["b", "a", "b"]))
+tp.as_enum(["b", "a", "b"])
 ```
 
 For a deferred input, Python first evaluates:
@@ -669,7 +772,8 @@ d1 = _Deferred(
 
 There is no immediate execution and no infinite recursion. Later,
 `d1.resolve(frame)` first produces the real one-column frame and then passes
-it directly into the original `as_enum()` implementation.
+it directly into the original `as_enum()` implementation. That implementation
+infers categories from the resolved frame and returns the Enum-cast expression.
 
 Now consider deferred categories:
 ```python
@@ -708,6 +812,15 @@ For an eager frame, `pull()` obtains the existing column as a `Series`. For a
 lazy frame, `TibbleLazy.pull()` collects the selected column because Enum
 categories must be concrete before the Enum dtype can be constructed.
 
+In this explicit-`categories` form, the first argument is already a symbolic
+column expression, so `as_enum()` returns an expression. Because the resolved
+categories came from a Series, they are cleaned, made unique, and sorted before
+the Enum dtype is created.
+
+`as_ordered()` is a thin alias that calls `as_enum(x, categories, reverse)`.
+It does not need its own decorator: calling the decorated public `as_enum()`
+inside it preserves exactly the same immediate and deferred behavior.
+
 At this point, `mutate()` is effectively receiving:
 ```python
 tl.mutate(y=d1)
@@ -721,13 +834,17 @@ normalization and execution layers must preserve and eventually resolve it.
 \##-----------------------------------------------------------------------------------------------------   
 
 Both `TibbleFrame.mutate()` and `TibbleLazy.mutate()` normalize their
-arguments before calling `with_columns()`:
+arguments before delegating execution to `_mutate_cols()`:
 ```python
-def mutate(self, *args, over=None, **kwargs):
+def mutate(self, *args, over=None, parallel=True, **kwargs):
     exprs = _as_list(args) + _kwargs_as_exprs(kwargs)
-    exprs = _over_exprs(exprs, over)
 
-    out = _mutate_cols(self.as_polars(), exprs)
+    out = _mutate_cols(
+        frame=self.as_polars(),
+        exprs=exprs,
+        over=over,
+        parallel=parallel,
+    )
     return out.pipe(the_matching_tidypyrs_converter)
 ```
 
@@ -776,21 +893,35 @@ d1.alias("y")
 ```
 
 Because `d1` has not produced a Polars expression yet, the alias operation
-must also be deferred.
+must also be deferred. The new generic attribute-and-call forwarding machinery
+does this automatically; `_Deferred` no longer needs a dedicated `alias()`
+method.
 
 \##--------------------------------------------------------------------------------------------   
-\## 10. `_Deferred.alias()` defers the name   
+\## 10. Generic forwarding also defers `alias()`   
 \##--------------------------------------------------------------------------------------------   
 
-The `alias()` method is:
+When normalization evaluates:
 ```python
-def alias(self, name):
-    return self.map(
-        lambda expression: expression.alias(name)
-    )
+d2 = d1.alias("y")
 ```
 
-It uses `map()` to add one more layer to the recipe.
+Python first evaluates the attribute access:
+```python
+d1.alias
+```
+
+Because `_Deferred` has no explicitly defined `alias` method,
+`__getattr__("alias")` creates a new recipe equivalent to:
+```python
+lambda frame: getattr(d1.resolve(frame), "alias")
+```
+
+The parentheses and argument then invoke `_Deferred.__call__()`, producing a
+recipe equivalent to:
+```python
+lambda frame: d1.resolve(frame).alias("y")
+```
 
 Before aliasing:
 ```python
@@ -800,12 +931,7 @@ d1(frame)
       )
 ```
 
-Calling:
-```python
-d2 = d1.alias("y")
-```
-
-creates:
+The newly composed recipe means:
 ```python
 d2(frame)
     = d1.resolve(frame).alias("y")
@@ -831,22 +957,38 @@ The layers represent:
 ```
 d0: select "y" from the future frame
 d1: convert the selected frame into an Enum expression
-d2: alias the resulting expression as "y"
+d2: look up and call alias("y") on the resulting expression
 ```
+
+This is the same machinery used by `f.colnames.sort()`. `alias()` is not a
+special deferred feature anymore; it is simply one ordinary future method call
+handled by `__getattr__()` and `__call__()`.
 
 \##-----------------------------------------------------------------------------------------------   
 \## 11. Final resolution inside `_mutate_cols()`   
 \##-----------------------------------------------------------------------------------------------   
 
 The deferred recipe finally receives the real working frame inside
-`_mutate_cols()`:
+`_mutate_cols()`. The helper supports parallel and sequential execution:
 ```python
-def _mutate_cols(frame, exprs):
-    for expr in exprs:
-        if isinstance(expr, _Deferred):
-            expr = expr.resolve(frame)
+def _mutate_cols(frame, exprs, over, parallel):
+    if parallel:
+        exprs = [
+            expr.resolve(frame) if isinstance(expr, _Deferred) else expr
+            for expr in exprs
+        ]
+        exprs = _over_exprs(exprs, over)
+        frame = frame.with_columns(*exprs)
 
-        frame = frame.with_columns(expr)
+    else:
+        for expr in exprs:
+            expr = (
+                expr.resolve(frame)
+                if isinstance(expr, _Deferred)
+                else expr
+            )
+            expr = _over_exprs([expr], over)[0]
+            frame = frame.with_columns(expr)
 
     return frame
 ```
@@ -894,11 +1036,18 @@ It can now be passed safely into:
 frame.with_columns(expr)
 ```
 
-Resolving inside the loop also preserves sequential mutation:
+With `parallel=True`, all deferred expressions are resolved against the same
+original working frame and are passed together to one `with_columns()` call.
+This preserves Polars' parallel expression execution, but one expression
+cannot use a column created by another expression in that same call.
+
+With `parallel=False`, each expression is resolved and added before processing
+the next one. This enables sequential mutation:
 ```python
 tf.mutate(
     copied=tp.col("y"),
     ordered=tp.as_enum(f.select("copied")),
+    parallel=False,
 )
 ```
 
@@ -906,12 +1055,17 @@ The first expression adds `copied` to `frame`. The next deferred expression
 is resolved against that updated frame, so `f.select("copied")` can see the
 newly created column.
 
+Without `parallel=False`, `f.select("copied")` would be resolved against the
+original frame, where `copied` does not yet exist. Sequential mode should be
+chosen specifically for dependencies between expressions, rather than as a
+general fallback for unrelated errors.
+
 The complete flow is:
 ```python
 f.select("y")
     -> deferred selection
     -> deferred Enum conversion
-    -> deferred alias
+    -> deferred attribute lookup and alias() call
     -> mutate supplies its current frame
     -> resolve all layers
     -> ordinary Polars expression
@@ -932,7 +1086,7 @@ f.y.pipe(tp.as_enum, categories=f.pull("y"))
     -> mutate supplies its current native Polars frame
     -> from_polars(frame).pull("y") returns a Series
     -> original_as_enum(pl.col("y"), categories=series)
-    -> deferred alias
+    -> deferred attribute lookup and alias() call
     -> ordinary Polars expression
     -> with_columns()
 ```
@@ -989,6 +1143,31 @@ f.pull("x")   # named column -> deferred pl.Series
 f.pull()      # last column at resolution time -> deferred pl.Series
 ```
 
+`f.colnames` obtains the future frame's column names as a deferred
+`pl.Series`:
+```python
+f.colnames
+f.colnames[::2]
+f.colnames.sort()
+```
+
+Indexing is forwarded by `_Deferred.__getitem__()`. Arbitrary public
+attributes and methods are forwarded by `_Deferred.__getattr__()` and
+`_Deferred.__call__()`, so Series methods do not need to be reimplemented one
+at a time. The actual Series operation still waits until the current frame is
+available.
+
+When a string Series produced by `f.colnames` reaches Tidypyrs' `select()`,
+the selection helper expands its values as column names. This contextual
+conversion is why:
+```python
+tf.select(f.colnames.sort())
+```
+
+selects columns in sorted name order instead of creating one literal Series
+column. `_Deferred` itself preserves the Series; only `select()` interprets
+that Series as a collection of column names.
+
 Unlike `f.select()`, `f.pull()` cannot delegate directly to the native frame,
 because `pull()` is a Tidypyrs method rather than a Polars method. Its resolver
 therefore converts the native working frame through `from_polars()` before
@@ -1003,6 +1182,9 @@ The central distinction is:
 f["x"] or f.x
     -> immediate Polars column expression
 
+f.colnames
+    -> deferred column-name Series requiring the current frame
+
 f.select("x")
     -> deferred frame requiring the current frame
 
@@ -1012,8 +1194,8 @@ f.pull("x")
 
 Finally, `f` never contains the actual current DataFrame or LazyFrame. It is a
 symbolic namespace. Frame-dependent operations receive the current frame only
-when a compatible verb, currently `mutate()`, resolves their `_Deferred`
-recipe. This avoids storing mutable global frame state inside `f`.
+when a compatible verb such as `select()` or `mutate()` resolves their
+`_Deferred` recipe. This avoids storing mutable global frame state inside `f`.
 
 For a LazyFrame, inferring Enum categories from either `f.select("x")` or
 `f.pull("x")` requires an internal collection because the category values must

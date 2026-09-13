@@ -4,6 +4,7 @@ uv run pytest tests/lazy/test_f_namespace.py
 
 import numpy as np
 import polars as pl
+
 import tidypyrs as tp
 from tidypyrs import f
 from tidypyrs.f_namespace import _defer_aware
@@ -65,6 +66,7 @@ def test_f_select_respects_sequential_mutate():
     actual = tp.TibbleLazy(y=["b", "a", "b"]).mutate(
         copied=pl.col("y"),
         ordered=tp.as_ordered(f.select("copied")),
+        parallel=False
     )
 
     assert isinstance(actual.pull("ordered").dtype, pl.Enum)
