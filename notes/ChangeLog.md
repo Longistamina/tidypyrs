@@ -1,3 +1,9 @@
+# 0.7.0
++ Add `f.colnames` for `f` namespace
++ Add `__getitem__` for `_Deferred`
++ Make `_Deferred` able to convert any method into a `_Deferred` object
++ Add `_select_cols` for `select` to be able to handle `_Deferred` inputs
+
 # 0.6.6
 + Enable `mutate` to run in both modes `parallel=True` and `parallel=False` 
 

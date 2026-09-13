@@ -1,7 +1,6 @@
 import copy
 
 import polars as pl
-from tidypyrs.reexports import Expr
 
 from .f_namespace import _defer_aware
 from .tibble_frame import TibbleFrame

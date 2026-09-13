@@ -4,6 +4,7 @@ uv run pytest tests/frame/test_f_namespace.py
 
 import numpy as np
 import polars as pl
+
 import tidypyrs as tp
 from tidypyrs import f
 from tidypyrs.f_namespace import _defer_aware

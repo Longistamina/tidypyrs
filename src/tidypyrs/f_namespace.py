@@ -19,59 +19,88 @@ class _Deferred:
     def __init__(self, resolver: Callable[[Any], Any]):  # `resolver` function takes one argument of any type [Any], and return one value of any type Any
         self._resolver = resolver
 
-    def resolve(self, frame):
-        return self._resolver(frame)
+    def resolve(self, object):
+        return self._resolver(object)
 
-    def map(self, function):
-        return _Deferred(lambda frame: function(self.resolve(frame)))
+    def __getitem__(self, key):
+        return _Deferred(lambda object: self.resolve(object)[key])
 
-    def alias(self, name):
-        return self.map(lambda expression: expression.alias(name))
+    def __getattr__(self, name):
+        """
+        Defer attribute access on the resolved object.
+
+        Examples
+        --------
+        f.colnames.sort
+        f.colnames.str
+        f.pull("x").dtype
+        """
+        if name.startswith("_"):
+            raise AttributeError(name)
+
+        return _Deferred(lambda object: getattr(self.resolve(object), name))
+
+    def __call__(self, *args, **kwargs):
+        """
+        Call the resolved object.
+
+        This converts a deferred bound method into the deferred method call.
+
+        Examples:
+        ------------
+        ``f.colnames.sort`` -> ``f.colnames.sort()``.
+        """
+        def resolver(object):
+            function = self.resolve(object)
+
+            resolved_args = [
+                arg.resolve(object) if isinstance(arg, _Deferred) else arg
+                for arg in args
+            ]
+
+            resolved_kwargs = {
+                key: value.resolve(object) if isinstance(value, _Deferred) else value
+                for key, value in kwargs.items()
+            }
+
+            return function(*resolved_args, **resolved_kwargs)
+
+        return _Deferred(resolver)
 
 
 # =============================================
 # @_deferred_aware decorator
 # =============================================
 
+
 def _defer_aware(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
         has_deferred = (
             any(isinstance(arg, _Deferred) for arg in args)
-            or any(
-                isinstance(value, _Deferred)
-                for value in kwargs.values()
-            )
+            or any(isinstance(value, _Deferred) for value in kwargs.values())
         )
 
         if not has_deferred:
             return function(*args, **kwargs)
 
-        def resolver(frame):
+        def resolver(object):
             resolved_args = tuple(
-                arg.resolve(frame)
-                if isinstance(arg, _Deferred)
-                else arg
+                arg.resolve(object) if isinstance(arg, _Deferred) else arg
                 for arg in args
             )
 
             resolved_kwargs = {
-                key: (
-                    value.resolve(frame)
-                    if isinstance(value, _Deferred)
-                    else value
-                )
+                key: value.resolve(object) if isinstance(value, _Deferred) else value
                 for key, value in kwargs.items()
             }
 
-            return function(
-                *resolved_args,
-                **resolved_kwargs,
-            )
+            return function(*resolved_args, **resolved_kwargs)
 
         return _Deferred(resolver)
 
     return wrapper
+
 
 # =============================================
 # define _FrameReference for ``f`` namespace
@@ -125,6 +154,10 @@ class _FrameReference:
         """
         return pl.all()
 
+    @property
+    def colnames(self):
+        from .funs import from_polars
+        return _Deferred(lambda frame: from_polars(frame).colnames)
 
     def pull(self, var=None) -> _Deferred:
         """

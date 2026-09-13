@@ -17,7 +17,7 @@ from .utils import (
     _is_string,
     _kwargs_as_exprs,
     _mutate_cols,
-    _over_exprs,
+    _select_cols,
     _uses_over,
 )
 
@@ -33,12 +33,51 @@ class TibbleFrame(pl.DataFrame):
     An eager data frame object that provides methods familiar to R tidyverse users.
     """
 
-    def __init__(self, _data=None, **kwargs):
-        if len(kwargs) > 0:
-            _data = kwargs
-        elif not_(isinstance(_data, dict)):
-            raise ValueError("_data must be a dictionary or kwargs must be used")
-        super().__init__(_data)
+    def __init__(
+        self,
+        _data=None,
+        *,
+        schema=None,
+        schema_overrides=None,
+        strict=True,
+        orient=None,
+        infer_schema_length=100,
+        nan_to_null=False,
+        **columns,
+    ):
+        """
+        Construct a TibbleFrame.
+
+        Data can be provided either as a dictionary:
+        >>> TibbleFrame({"x": [1, 2], "y": ["a", "b"]})
+
+        or as keyword columns:
+        >>> TibbleFrame(x=[1, 2], y=["a", "b"])
+        """
+        if _data is not None and columns:
+            raise TypeError(
+                "Provide data using either `_data` or keyword columns, not both."
+            )
+
+        if columns:
+            _data = columns
+        elif _data is None:
+            _data = {}
+        elif not isinstance(_data, dict):
+            raise TypeError(
+                "`_data` must be a dictionary. "
+                "Alternatively, provide columns as keyword arguments."
+            )
+
+        super().__init__(
+            _data,
+            schema=schema,
+            schema_overrides=schema_overrides,
+            strict=strict,
+            orient=orient,
+            infer_schema_length=infer_schema_length,
+            nan_to_null=nan_to_null,
+        )
 
     def __dir__(self):
         _TibbleFrame_methods = [
@@ -63,6 +102,7 @@ class TibbleFrame(pl.DataFrame):
             "inner_join",
             "lazy",
             "left_join",
+            "map_columns",
             "mutate",
             "names",
             "nrow",
@@ -674,6 +714,62 @@ class TibbleFrame(pl.DataFrame):
             on = list(set(self.colnames) & set(tf.colnames))
         return super().join(tf, on, "left", left_on=left_on, right_on=right_on, suffix=suffix).pipe(_from_polars_frame)
 
+    def map_columns(self, column_names, function, *args, **kwargs):
+        """
+        Apply an eager Series function to selected columns.
+
+        Prefer ``mutate()`` or Polars expressions whenever possible.
+        Use this method for operations available on Series but not Expr.
+        """
+        out = self.as_polars().map_columns(column_names, function, *args, **kwargs)
+        return out.pipe(_from_polars_frame)
+
+    def map_rows(self, function, return_dtype=None, *, inference_size: int = 256):
+        """
+        Apply a custom/user-defined function (UDF) over the rows of the DataFrame.
+
+        .. warning::
+            This method is much slower than the native expressions API.
+            Only use it if you cannot implement your logic otherwise.
+
+        The UDF will receive each row as a tuple of values: `udf(row)`.
+
+        Implementing logic using a Python function is almost always *significantly*
+        slower and more memory intensive than implementing the same logic using
+        the native expression API because:
+
+        - The native expression engine runs in Rust; UDFs run in Python.
+        - Use of Python UDFs forces the DataFrame to be materialized in memory.
+        - Polars-native expressions can be parallelised (UDFs typically cannot).
+        - Polars-native expressions can be logically optimised (UDFs cannot).
+
+        Wherever possible you should strongly prefer the native expression API
+        to achieve the best performance.
+
+        Parameters
+        ----------
+        function
+            Custom function or lambda.
+        return_dtype
+            Output type of the operation. If none given, Polars tries to infer the type.
+        inference_size
+            Only used in the case when the custom function returns rows.
+            This uses the first `n` rows to determine the output schema.
+
+        Notes
+        -----
+        * The frame-level `map_rows` cannot track column names (as the UDF is a
+          black-box that may arbitrarily drop, rearrange, transform, or add new
+          columns); if you want to apply a UDF such that column names are preserved,
+          you should use the expression-level `map_elements` syntax instead.
+
+        * If your function is expensive and you don't want it to be called more than
+          once for a given input, consider applying an `@lru_cache` decorator to it.
+          If your data is suitable you may achieve *significant* speedups.
+        """
+        out = self.as_polars().map_rows(function, return_dtype, inference_size=inference_size)
+        return out.pipe(_from_polars_frame)
+
     def mutate(self, *args, over=None, parallel=True, **kwargs):
         """
         Add or modify columns.
@@ -1050,7 +1146,7 @@ class TibbleFrame(pl.DataFrame):
         rename_dict = {k: v for k, v in zip(self.colnames, nm)}
         return self.rename(rename_dict)
 
-    def select(self, *args):
+    def select(self, *args, **kwargs):
         """
         Select or drop columns
 
@@ -1065,9 +1161,9 @@ class TibbleFrame(pl.DataFrame):
         >>> tf.select('a', 'b')
         >>> tf.select(col('a'), col('b'))
         """
-        args = _as_list(args)
-        args = _col_exprs(args)
-        return super().select(args).pipe(_from_polars_frame)
+        exprs = _as_list(args) + _kwargs_as_exprs(kwargs)
+        out = _select_cols(frame=self.as_polars(), exprs=exprs)
+        return out.pipe(_from_polars_frame)
 
     def slice(self, *args, over=None):
         """
