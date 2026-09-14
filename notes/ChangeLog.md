@@ -1,3 +1,10 @@
+# 0.8.0
++ Add `tp.nth()` and `f.nth()` for selecting columns with slice of indices
++ Add `TibbleFrame.describe()` and `TibbleLazy.describe()`
++ Add `TibbleFrame.null_count()` and `TibbleLazy.null_count()`
++ Add `fill_null` and `fill_nan` to both `TibbleFrame` and `TibbleLazy`
++ Add `transpose` to `TibbleFrame`
+
 # 0.7.0
 + Add `f.colnames` for `f` namespace
 + Add `__getitem__` for `_Deferred`

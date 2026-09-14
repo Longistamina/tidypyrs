@@ -90,12 +90,16 @@ class TibbleFrame(pl.DataFrame):
             "colnames",
             "clone",
             "count",
+            "describe",
             "distinct",
             "drop",
             "drop_null",
             "head",
             "fill",
+            "fill_nan",
+            "fill_null",
             "filter",
+            "full_join",
             "glimpse",
             "group_by",
             "group_by_dynamic",
@@ -104,10 +108,9 @@ class TibbleFrame(pl.DataFrame):
             "left_join",
             "map_columns",
             "mutate",
-            "names",
-            "nrow",
             "ncol",
-            "full_join",
+            "nrow",
+            "null_count",
             "pipe",
             "pivot_longer",
             "pivot_wider",
@@ -124,6 +127,8 @@ class TibbleFrame(pl.DataFrame):
             "slice_tail",
             "summarize",
             "tail",
+            "transpose",
+            "unite",
             "write_csv",
             "write_parquet",
         ]
@@ -304,6 +309,34 @@ class TibbleFrame(pl.DataFrame):
             out = out.arrange(desc(name))
 
         return out
+
+    def describe(
+        self,
+        percentiles: tuple[float] | list[float] | float | None = (0.25, 0.50, 0.75),
+        *,
+        interpolation = "nearest"
+    ):
+        """
+        Summary statistics for a DataFrame.
+
+        Parameters
+        ----------
+        percentiles
+            One or more percentiles to include in the summary statistics.
+            All values must be in the range `[0, 1]`.
+
+        interpolation : {'nearest', 'higher', 'lower', 'midpoint', 'linear', 'equiprobable'}
+            Interpolation method used when calculating percentiles.
+
+        Notes
+        -----
+        The median is included by default as the 50% percentile.
+
+        Example
+        --------
+        >>> tf.describe()
+        """
+        return super().describe(percentiles, interpolation=interpolation).pipe(_from_polars_frame)
 
     def distinct(self, *args):
         """
@@ -546,46 +579,81 @@ class TibbleFrame(pl.DataFrame):
 
         return TibbleGroupBy(group_by, _from_polars_frame)
 
-    def fill(self, *args, direction="down", over=None):
+    def fill_nan(self, value=0.0):
         """
-        Fill in missing values with previous or next value
+        Fill floating point NaN values by an Expression evaluation.
+
+        Parameters
+        ----------
+        value : Value used to fill NaN values.
+
+        Examples
+        --------
+        ... tf = tp.TibbleFrame(
+        ...     {
+        ...         "a": [1.5, 2, float("nan"), 4],
+        ...         "b": [0.5, 4, float("nan"), 13],
+        ...     }
+        ... )
+        >>> tf.fill_nan(99)
+        shape: (4, 2)
+        ┌──────┬──────┐
+        │ a    ┆ b    │
+        │ ---  ┆ ---  │
+        │ f64  ┆ f64  │
+        ╞══════╪══════╡
+        │ 1.5  ┆ 0.5  │
+        │ 2.0  ┆ 4.0  │
+        │ 99.0 ┆ 99.0 │
+        │ 4.0  ┆ 13.0 │
+        └──────┴──────┘
+        """
+        return super().fill_nan(value=value).pipe(_from_polars_frame)
+
+    def fill_null(
+        self,
+        *args,
+        value=None,
+        strategy="None",
+        limit: int | None = None,
+        over=None,
+    ):
+        """
+        Fill null values using the specified value or strategy.
 
         Parameters
         ----------
         *args : str
             Columns to fill
-        direction : str
-            Direction to fill. One of ['down', 'up', 'downup', 'updown']
+        value
+            Value used to fill null values.
+        strategy : {None, 'forward', 'backward', 'min', 'max', 'mean', 'zero', 'one'}
+            Strategy used to fill null values.
+        limit
+            Number of consecutive null values to fill when using the 'forward' or
+            'backward' strategy.
         over : str, list
             Columns to group over
+        Returns
+        -------
+        TibbleFrame
+            TibbleFrame with None values replaced by the filling strategy.
 
-        Examples
-        --------
+        Examples:
+        ---------
         >>> tf = tp.TibbleFrame({
         ...     'a': [1, None, 3, 4, 5],
         ...     'b': [None, 2, None, None, 5],
         ...     'groups': ['a', 'a', 'a', 'b', 'b']
         ... })
-        >>> tf.fill('a', 'b')
-        >>> tf.fill('a', 'b', over='groups')
-        >>> tf.fill('a', 'b', over='groups')
-        >>> tf.fill('a', 'b', direction='downup')
+        >>> tf.fill('a', 'b', value=0)
+        >>> tf.fill(f('a', 'b'), strategy='backward', over='groups')
         """
         args = _as_list(args)
         if len(args) == 0:
             return self
         args = _col_exprs(args)
-        options = {"down": "forward", "up": "backward"}
-        if direction in ["down", "up"]:
-            direction = options[direction]
-            exprs = [arg.fill_null(strategy=direction) for arg in args]
-        elif direction == "downup":
-            exprs = [arg.fill_null(strategy="forward").fill_null(strategy="backward") for arg in args]
-        elif direction == "updown":
-            exprs = [arg.fill_null(strategy="backward").fill_null(strategy="forward") for arg in args]
-        else:
-            raise ValueError("direction must be one of down, up, downup, or updown")
-
+        exprs = [arg.fill_null(value=value, strategy=strategy, limit=limit) for arg in args]
         return self.mutate(*exprs, over=over)
 
     def filter(self, *conditions, over=None):
@@ -821,6 +889,16 @@ class TibbleFrame(pl.DataFrame):
         exprs = _as_list(args) + _kwargs_as_exprs(kwargs)
         out = _mutate_cols(frame=self.as_polars(), exprs=exprs, over=over, parallel=parallel)
         return out.pipe(_from_polars_frame)
+
+    def null_count(self):
+        """
+        Create a new DataFrame that shows the null counts per column.
+
+        Examples
+        --------
+        >>> tf.null_count()
+        """
+        return super().null_count().pipe(_from_polars_frame)
 
     def pipe(self, function, *args, **kwargs):
         """
@@ -1272,6 +1350,9 @@ class TibbleFrame(pl.DataFrame):
         """Alias for `.slice_tail()`"""
         return self.slice_tail(n, over=over).pipe(_from_polars_frame)
 
+    def transpose(self, *, include_header: bool = False, header_name: str = "column", column_names=None):
+        return super().transpose(include_header=include_header, header_name=header_name, column_names=column_names).pipe(_from_polars_frame)
+
     def unite(self, col="_united", unite_cols=None, sep="_", remove=True):
         """
         Unite multiple columns by pasting strings together
@@ -1364,17 +1445,6 @@ class TibbleFrame(pl.DataFrame):
         return pl.Series(super().columns, dtype=pl.String)
 
     @property
-    def columns(self):
-        """
-        Get column names as polars.Series
-
-        Examples
-        --------
-        >>> tf.columns
-        """
-        return pl.Series(super().columns, dtype=pl.String)
-
-    @property
     def ncol(self):
         """
         Get number of columns
@@ -1460,13 +1530,9 @@ _allowed_methods = ["dtypes", "frame_equal", "get_columns", "lazy", "pipe"]
 
 _polars_methods = [
     "apply",
-    "columns",
-    "describe",
     "downsample",
     "drop_duplicates",
     "explode",
-    "fill_nan",
-    "fill_null",
     "find_idx_by_name",
     "fold",
     "get_column",
@@ -1485,7 +1551,6 @@ _polars_methods = [
     "median",
     "min",
     "n_chunks",
-    "null_count",
     "quantile",
     "rechunk",
     "replace",
@@ -1509,14 +1574,9 @@ _polars_methods = [
     "to_numpy",
     "to_pandas",
     "to_parquet",
-    "transpose",
     "unnest",
     "unpivot",
     "var",
     "width",
-    "with_column",
-    "with_columns",
-    "with_column_renamed",
-    "with_columns",
     "with_row_index"
 ]
