@@ -159,6 +159,24 @@ class _FrameReference:
         from .funs import from_polars
         return _Deferred(lambda frame: from_polars(frame).colnames)
 
+    def nth(self, *indices, strict: bool = True):
+        """
+        Get the nth column(s) of the context.
+
+        Parameters
+        ----------
+        indices
+            One or more indices representing the columns to retrieve.
+        strict
+            By default, all specified indices must be valid; if any index is out of bounds,
+            an error is raised. If set to `False`, out-of-bounds indices are ignored.
+
+        Examples
+        --------
+        tl.select(f.nth(0, 2, 5)).collect()
+        """
+        return pl.selectors.by_index(*indices, require_all=strict).as_expr()
+
     def pull(self, var=None) -> _Deferred:
         """
         Defer extracting a column from the current frame as a Series.

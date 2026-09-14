@@ -8,6 +8,7 @@ __all__ = [  # noqa: RUF022
     "element",
     "exclude",
     "lit",
+    "nth",
     "struct",
     "when",
     # Experession types
@@ -42,6 +43,7 @@ concat_list = pl.concat_list
 element = pl.element
 exclude = pl.exclude
 lit = pl.lit
+nth = pl.nth
 struct = pl.struct
 when = pl.when
 
