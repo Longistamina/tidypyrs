@@ -1,3 +1,6 @@
+# 0.10.0
++ Add `tp.selectors` and many more dtypes
+
 # 0.9.1
 + Enhance `_as_list` to handle `range(start, stop, step)` as input
 
