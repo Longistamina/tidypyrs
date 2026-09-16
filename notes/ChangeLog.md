@@ -1,3 +1,6 @@
+# 0.9.0
++ Add `tp.Config` as alias for `pl.Config`
+
 # 0.8.0
 + Add `tp.nth()` and `f.nth()` for selecting columns with slice of indices
 + Add `TibbleFrame.describe()` and `TibbleLazy.describe()`

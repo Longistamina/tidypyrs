@@ -34,6 +34,8 @@ __all__ = [  # noqa: RUF022
     "Enum",
     "Object",
     "Null",
+    # Config
+    "Config",
 ]
 
 # Expressions
@@ -79,3 +81,6 @@ Enum = pl.Enum
 Object = pl.Object
 
 Null = pl.Null
+
+# Config
+Config = pl.Config
