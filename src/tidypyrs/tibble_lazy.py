@@ -1181,7 +1181,7 @@ class TibbleLazy(pl.LazyFrame):
 
         Parameters
         ----------
-        *args : int, list
+        *args : int, list, range
             Rows to grab
         by : str, list
             Columns to group by
@@ -1190,6 +1190,7 @@ class TibbleLazy(pl.LazyFrame):
         --------
         >>> tl = tp.TibbleLazy({'a': range(3), 'b': range(3), 'c': ['a', 'a', 'b']})
         >>> tl.slice(0, 1)
+        >>> tl.slice(range(1, 10, 2))
         >>> tl.slice(0, over='c')
         """
         rows = _as_list(args)

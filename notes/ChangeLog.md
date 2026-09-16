@@ -1,3 +1,6 @@
+# 0.9.1
++ Enhance `_as_list` to handle `range(start, stop, step)` as input
+
 # 0.9.0
 + Add `tp.Config` as alias for `pl.Config`
 

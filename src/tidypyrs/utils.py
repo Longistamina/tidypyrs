@@ -107,7 +107,12 @@ def _as_list(x):
     if _is_series(x):
         return x.to_list()
     if isinstance(x, (list, tuple)):
-        return _list_flatten([value.to_list() if _is_series(value) else value for value in x])
+        return _list_flatten([
+            value.to_list() if _is_series(value)
+            else list(value) if isinstance(value, (range, tuple))
+            else value
+            for value in x
+        ])
     return [x]
 
 
