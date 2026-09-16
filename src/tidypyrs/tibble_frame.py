@@ -1249,7 +1249,7 @@ class TibbleFrame(pl.DataFrame):
 
         Parameters
         ----------
-        *args : int, list
+        *args : int, list, range
             Rows to grab
         by : str, list
             Columns to group by
@@ -1258,6 +1258,7 @@ class TibbleFrame(pl.DataFrame):
         --------
         >>> tf = tp.TibbleFrame({'a': range(3), 'b': range(3), 'c': ['a', 'a', 'b']})
         >>> tf.slice(0, 1)
+        >>> tf.slice(range(1, 10, 2))
         >>> tf.slice(0, over='c')
         """
         rows = _as_list(args)
