@@ -1,3 +1,6 @@
+# 0.10.1
++ Enhance `slice` method to cover behaviour of `gather_every`
+
 # 0.10.0
 + Add `tp.selectors` and many more dtypes
 

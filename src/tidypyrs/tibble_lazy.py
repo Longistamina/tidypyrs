@@ -17,6 +17,7 @@ from .utils import (
     _is_string,
     _kwargs_as_exprs,
     _mutate_cols,
+    _safe_len,
     _select_cols,
     _uses_over,
 )
@@ -1175,7 +1176,7 @@ class TibbleLazy(pl.LazyFrame):
         out = _select_cols(frame=self.as_polars(), exprs=exprs)
         return out.pipe(_from_polars_lazy)
 
-    def slice(self, *args, over=None):
+    def slice(self, *args, start: int|None = None, step: int = 1, over=None):
         """
         Grab rows from a data frame
 
@@ -1183,8 +1184,17 @@ class TibbleLazy(pl.LazyFrame):
         ----------
         *args : int, list, range
             Rows to grab
-        by : str, list
+
+        start, step: int
+            Use for slicing every `step` from `start` index to the end.
+            Works like polars `gather_every(n, offset)`
+
+        over : str, list
             Columns to group by
+
+        Notes
+        -----
+        Only provide `*args` inputs or `start-step` inputs, not both.
 
         Examples
         --------
@@ -1192,14 +1202,25 @@ class TibbleLazy(pl.LazyFrame):
         >>> tl.slice(0, 1)
         >>> tl.slice(range(1, 10, 2))
         >>> tl.slice(0, over='c')
+        >>> tl.slice(start=0, step=2, over='c')
         """
-        rows = _as_list(args)
+        if (_safe_len(args) > 0) and (start is not None):
+            raise ValueError("Should provide only `*args` inputs or `start-step` inputs, not both")
 
-        if _uses_over(over):
-            tl = super().select(pl.all().gather(rows).over(over, mapping_strategy="explode"))
+        elif start is not None:
+            if _uses_over(over):
+                tl = super().select(pl.all().gather_every(n=step, offset=start).over(over, mapping_strategy="explode"))
+            else:
+                tl = super().select(pl.all().gather_every(n=step, offset=start))
+            return tl.pipe(_from_polars_lazy)
+
         else:
-            tl = super().select(pl.all().gather(rows))
-        return tl.pipe(_from_polars_lazy)
+            rows = _as_list(args)
+            if _uses_over(over):
+                tl = super().select(pl.all().gather(rows).over(over, mapping_strategy="explode"))
+            else:
+                tl = super().select(pl.all().gather(rows))
+            return tl.pipe(_from_polars_lazy)
 
     def slice_head(self, n=5, *, over=None):
         """
@@ -1233,7 +1254,7 @@ class TibbleLazy(pl.LazyFrame):
         ----------
         n : int
             Number of rows to grab
-        by : str, list
+        over : str, list
             Columns to group by
 
         Examples
