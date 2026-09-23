@@ -200,6 +200,11 @@ class _FrameReference:
         from .funs import from_polars
         return _Deferred(lambda frame: from_polars(frame).pull(var))
 
+    @property
+    def schema(self):
+        from .funs import from_polars
+        return _Deferred(lambda frame: from_polars(frame).collect_schema())
+
     def select(self, *exprs, **named_exprs) -> _Deferred:
         """
         Select from the frame currently executing the verb.

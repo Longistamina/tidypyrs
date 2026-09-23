@@ -1,4 +1,5 @@
 import copy
+from typing import overload
 
 import polars as pl
 
@@ -597,6 +598,11 @@ def floor(x):
     x = _col_expr(x)
     return x.floor()
 
+@overload
+def from_polars(frame: pl.DataFrame) -> TibbleFrame: ...
+
+@overload
+def from_polars(frame: pl.LazyFrame) -> TibbleLazy: ...
 
 def from_polars(frame):
     """
@@ -1033,7 +1039,7 @@ def quantile(x, quantile=0.5):
     return x.quantile(quantile)
 
 
-def read_csv(source, **kwargs):
+def read_csv(source, **kwargs) -> TibbleFrame:
     """Read a CSV file into a TibbleFrame."""
     return pl.read_csv(source, **kwargs).pipe(from_polars)
 
@@ -1053,7 +1059,7 @@ def read_excel(source, **kwargs):
     return from_polars(result)
 
 
-def read_parquet(source, **kwargs):
+def read_parquet(source, **kwargs) -> TibbleFrame:
     """Read Parquet data into a TibbleFrame."""
     return pl.read_parquet(source, **kwargs).pipe(from_polars)
 
@@ -1158,7 +1164,7 @@ def sd(x):
     return x.std()
 
 
-def scan_csv(source, **kwargs):
+def scan_csv(source, **kwargs) -> TibbleLazy:
     """Lazily scan CSV data into a TibbleLazy."""
     return pl.scan_csv(source, **kwargs).pipe(from_polars)
 

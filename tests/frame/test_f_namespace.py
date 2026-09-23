@@ -66,6 +66,7 @@ def test_f_select_respects_sequential_mutate():
     actual = tp.TibbleFrame(y=["b", "a", "b"]).mutate(
         copied=pl.col("y"),
         ordered=tp.as_ordered(f.select("copied")),
+        parallel=False
     )
 
     assert isinstance(actual.pull("ordered").dtype, pl.Enum)
