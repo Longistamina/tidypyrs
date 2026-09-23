@@ -1,4 +1,3 @@
-from numpy.testing import assert_
 import polars as pl
 
 import tidypyrs as tp
@@ -14,7 +13,7 @@ def test_map_batches():
             }
         )
         .map_batches(lambda x: 2 * x, streamable=True)
-        .collect(streaming=True)
+        .collect(engine="streaming")
     )
 
     expected = (

@@ -3,8 +3,10 @@ import functools as ft
 from collections.abc import Callable, Mapping
 from datetime import timedelta
 from operator import and_, not_
+from typing import cast
 
 import polars as pl
+from tidypyrs.tibble_frame import TibbleFrame
 
 from .groupby import TibbleLazyGroupBy
 from .reexports import *
@@ -189,7 +191,7 @@ class TibbleLazy(pl.LazyFrame):
         desc = [bool(isinstance(expr, DescCol)) for expr in exprs]
         return super().sort(exprs, descending=desc).pipe(_from_polars_lazy)
 
-    def as_polars(self):
+    def as_polars(self) -> pl.LazyFrame:
         """
         Convert to a polars DataFrame
 
@@ -199,7 +201,7 @@ class TibbleLazy(pl.LazyFrame):
         """
         self = copy.copy(self)
         self.__class__ = pl.LazyFrame
-        return self
+        return cast(pl.LazyFrame, self)
 
     def bind_cols(self, *args):
         """
@@ -426,7 +428,7 @@ class TibbleLazy(pl.LazyFrame):
             maintain_order=maintain_order,
             **named_by,
         )
-        return TibbleLazyGroupBy(group_by, _from_polars_lazy)
+        return TibbleLazyGroupBy(group_by, _from_polars_lazy, self)
 
     def group_by_dynamic(
         self,
@@ -533,7 +535,7 @@ class TibbleLazy(pl.LazyFrame):
             start_by=start_by,
         )
 
-        return TibbleLazyGroupBy(grouped, _from_polars_lazy)
+        return TibbleLazyGroupBy(grouped, _from_polars_lazy, self)
 
     def fill_nan(self, value=0.0):
         """
@@ -1397,7 +1399,7 @@ class TibbleLazy(pl.LazyFrame):
 ##--------------------------------------------------------------------------------------##
 
 
-def as_tl(x):
+def as_tl(x) -> TibbleLazy:
     """
     Convert an object to a TibbleLazy
 
@@ -1439,7 +1441,7 @@ def is_tl(x):
 def _from_polars_lazy(lf):
     tl = copy.copy(lf)
     tl.__class__ = TibbleLazy
-    return tl
+    return cast(TibbleLazy, tl)
 
 
 _allowed_methods = ["dtypes", "frame_equal", "get_columns", "lazy", "pipe"]
@@ -1493,6 +1495,5 @@ _polars_methods = [
     "unnest",
     "unpivot",
     "var",
-    "width",
     "with_row_index"
 ]

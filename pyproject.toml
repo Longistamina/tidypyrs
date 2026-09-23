@@ -1,6 +1,6 @@
 [project]
 name = "tidypyrs"
-version = "0.10.1"
+version = "0.11.0"
 description = "Bring Tidyverse to Python with Polars backend"
 readme = { file = "README.md", content-type = "text/markdown" }
 license = "MIT"
@@ -47,6 +47,8 @@ dev = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "ruff>=0.16.5",
+    "scipy>=1.15.3",
+    "basedpyright>=1.40.1",
 ]
 
 [project.urls]

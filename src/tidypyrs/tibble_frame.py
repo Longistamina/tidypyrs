@@ -3,6 +3,7 @@ import functools as ft
 from collections.abc import Callable, Mapping
 from datetime import timedelta
 from operator import and_, not_
+from typing import cast
 
 import polars as pl
 
@@ -224,7 +225,7 @@ class TibbleFrame(pl.DataFrame):
         """
         return self.as_polars().to_pandas()
 
-    def as_polars(self):
+    def as_polars(self) -> pl.DataFrame:
         """
         Convert to a polars DataFrame
 
@@ -234,7 +235,7 @@ class TibbleFrame(pl.DataFrame):
         """
         self = copy.copy(self)
         self.__class__ = pl.DataFrame
-        return self
+        return cast(pl.DataFrame, self)
 
     def bind_cols(self, *args):
         """
@@ -1503,7 +1504,7 @@ class TibbleFrame(pl.DataFrame):
 ##--------------------------------------------------------------------------------------##
 
 
-def as_tf(x):
+def as_tf(x) -> TibbleFrame:
     """
     Convert an object to a TibbleFrame
 
@@ -1545,7 +1546,7 @@ def is_tf(x):
 def _from_polars_frame(tf):
     tf = copy.copy(tf)
     tf.__class__ = TibbleFrame
-    return tf
+    return cast(TibbleFrame, tf)
 
 
 _allowed_methods = ["dtypes", "frame_equal", "get_columns", "lazy", "pipe"]
@@ -1599,6 +1600,5 @@ _polars_methods = [
     "unnest",
     "unpivot",
     "var",
-    "width",
     "with_row_index"
 ]
