@@ -1,3 +1,8 @@
+# 0.11.0
++ Added `map_groups` to `TibbleGroupBy` and `TibbleLazyGroupBy`
++ Added deferred `f.schema`
++ Improve some typings and castings
+
 # 0.10.1
 + Enhance `slice` method to cover behaviour of `gather_every`
 
