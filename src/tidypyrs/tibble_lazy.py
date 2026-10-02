@@ -127,6 +127,8 @@ class TibbleLazy(pl.LazyFrame):
             "slice",
             "slice_head",
             "slice_tail",
+            "sql",
+            "summarise",
             "summarize",
             "tail",
             "unite"
