@@ -119,6 +119,7 @@ class TibbleFrame(pl.DataFrame):
             "print",
             "pull",
             "relocate",
+            "remove",
             "rename",
             "replace_null",
             "select",
@@ -127,6 +128,7 @@ class TibbleFrame(pl.DataFrame):
             "slice",
             "slice_head",
             "slice_tail",
+            "sql",
             "summarize",
             "tail",
             "transpose",
@@ -1108,6 +1110,32 @@ class TibbleFrame(pl.DataFrame):
 
         return self.select(final_order)
 
+    def remove(self, *conditions, over=None):
+        """
+        Remove rows, dropping those that match one or more conditions
+
+        Parameters
+        ----------
+        *conditions : Expr
+            Conditions to filter by
+        over : str, list
+            Columns to group by
+
+        Examples
+        --------
+        >>> tf = tp.TibbleFrame({'a': range(3), 'b': ['a', 'a', 'b']})
+        >>> tf.remove(col('a') < 2, col('b') == 'a')
+        >>> tf.remove((col('a') < 2) & (col('b') == 'a'))
+        >>> tf.remove(col('a') <= tp.mean(col('a')), over='b')
+        """
+        predicate = ft.reduce(and_, conditions)
+
+        if _uses_over(over):
+            predicate = predicate.over(_as_list(over))
+
+        out = super().remove(predicate)
+        return out.pipe(_from_polars_frame)
+
     def rename(
         self,
         mapping: Mapping[str, str] | Callable[[str], str] | None = None,
@@ -1338,6 +1366,25 @@ class TibbleFrame(pl.DataFrame):
         else:
             tf = tf.tail(n)
         return tf.pipe(_from_polars_frame)
+
+    def sql(self, query: str, *, table_name: str = 'self'):
+        '''
+        Execute a SQL query against the TibbleFrame.
+
+        Parameters:
+        ----------
+        query : str
+            SQL query to execute.
+
+        table_name : str
+            Optionally provide an explicit name for the table that represents the calling frame (defaults to “self”).
+
+        Examples
+        --------
+        >>> tf = tp.TibbleFrame({'a': range(3), 'b': range(3), 'c': ['a', 'a', 'b']})
+        >>> tf.sql("SELECT a, b FROM self WHERE a > 1")
+        '''
+        return super().sql(query=query, table_name=table_name).pipe(_from_polars_frame)
 
     def summarise(self, *args, **kwargs):
         """Alias for `.summarize()`"""

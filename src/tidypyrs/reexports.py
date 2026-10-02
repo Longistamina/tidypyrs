@@ -1,4 +1,10 @@
+from typing import TYPE_CHECKING, Literal, overload
+
 import polars as pl
+
+if TYPE_CHECKING:
+    from .tibble_frame import TibbleFrame
+    from .tibble_lazy import TibbleLazy
 
 __all__ = [  # noqa: RUF022
     # Experessions
@@ -44,6 +50,10 @@ __all__ = [  # noqa: RUF022
     "Enum",
     "Object",
     "Null",
+    # sql related
+    "sql",
+    "sql_expr",
+    "SQLContext",
     # Config
     "Config",
 ]
@@ -61,7 +71,13 @@ when = pl.when
 
 # Expression types
 Expr = pl.Expr
-Series = pl.Series
+
+class Series(pl.Series):
+    def to_frame(self, name=None) -> "TibbleFrame":
+        from .tibble_frame import _from_polars_frame
+
+        out = super().to_frame(name=name)
+        return _from_polars_frame(out)
 
 # Selectors
 selectors = pl.selectors
@@ -104,5 +120,57 @@ Object = pl.Object
 
 Null = pl.Null
 
+# sql related
+def _wrap_sql_result(out: pl.DataFrame | pl.LazyFrame,) -> "TibbleFrame | TibbleLazy":
+    if isinstance(out, pl.LazyFrame):
+        from .tibble_lazy import as_tl
+        return as_tl(out)
+    from .tibble_frame import as_tf
+    return as_tf(out)
+
+@overload
+def sql(query: str, *, eager: Literal[True],) -> "TibbleFrame": ...
+
+@overload
+def sql(query: str, *, eager: Literal[False] = False,) -> "TibbleLazy": ...
+
+def sql(query: str, *, eager: bool = False,) -> "TibbleFrame | TibbleLazy":
+    return _wrap_sql_result(
+        pl.sql(query=query, eager=eager)
+    )
+
+sql_expr = pl.sql_expr
+
+class SQLContext(pl.SQLContext):
+    """SQLContext that returns tidypyrs frames."""
+
+    @overload
+    def execute(self, query: str, *, eager: Literal[True]) -> "TibbleFrame": ...
+
+    @overload
+    def execute(self, query: str, *, eager: Literal[False]) -> "TibbleLazy": ...
+
+    @overload
+    def execute(self, query: str, *, eager: None = None) -> "TibbleFrame | TibbleLazy": ...
+
+    def execute(self, query: str, *, eager: bool | None = None) -> "TibbleFrame | TibbleLazy":
+        out = super().execute(query=query, eager=eager)
+        return _wrap_sql_result(out)
+
+    @classmethod
+    @overload
+    def execute_global(cls, query: str, *, eager: Literal[True]) -> "TibbleFrame": ...
+
+    @classmethod
+    @overload
+    def execute_global(cls, query: str, *, eager: Literal[False] = False) -> "TibbleLazy": ...
+
+    @classmethod
+    def execute_global(cls, query: str, *, eager: bool = False) -> "TibbleFrame | TibbleLazy":
+        out = super().execute_global(
+            query=query,
+            eager=eager,
+        )
+        return _wrap_sql_result(out)
 # Config
 Config = pl.Config

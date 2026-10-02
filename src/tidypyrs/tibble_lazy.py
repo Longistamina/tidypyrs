@@ -6,6 +6,7 @@ from operator import and_, not_
 from typing import cast
 
 import polars as pl
+
 from tidypyrs.tibble_frame import TibbleFrame
 
 from .groupby import TibbleLazyGroupBy
@@ -29,7 +30,6 @@ __all__ = [
     "as_tl",
     "is_tl",
 ]
-
 
 class TibbleLazy(pl.LazyFrame):
     """
@@ -119,6 +119,7 @@ class TibbleLazy(pl.LazyFrame):
             "print",
             "relocate",
             "rename",
+            "remove",
             "replace_null",
             "select",
             "separate",
@@ -1041,6 +1042,32 @@ class TibbleLazy(pl.LazyFrame):
 
         return self.select(final_order)
 
+    def remove(self, *conditions, over=None):
+        """
+        Remove rows, dropping those that match one or more conditions
+
+        Parameters
+        ----------
+        *conditions : Expr
+            Conditions to filter by
+        over : str, list
+            Columns to group by
+
+        Examples
+        --------
+        >>> tl = tp.TibbleFrame({'a': range(3), 'b': ['a', 'a', 'b']})
+        >>> tl.remove(col('a') < 2, col('b') == 'a')
+        >>> tl.remove((col('a') < 2) & (col('b') == 'a'))
+        >>> tl.remove(col('a') <= tp.mean(col('a')), over='b')
+        """
+        predicate = ft.reduce(and_, conditions)
+
+        if _uses_over(over):
+            predicate = predicate.over(_as_list(over))
+
+        out = super().remove(predicate)
+        return out.pipe(_from_polars_lazy)
+
     def rename(
         self,
         mapping: Mapping[str, str] | Callable[[str], str] | None = None,
@@ -1271,6 +1298,25 @@ class TibbleLazy(pl.LazyFrame):
         else:
             tl = tl.tail(n)
         return tl.pipe(_from_polars_lazy)
+
+    def sql(self, query: str, *, table_name: str = 'self'):
+        '''
+        Execute a SQL query against the TibbleLazy.
+
+        Parameters:
+        ----------
+        query : str
+            SQL query to execute.
+
+        table_name : str
+            Optionally provide an explicit name for the table that represents the calling frame (defaults to “self”).
+
+        Examples
+        --------
+        >>> tl = tp.TibbleLazy({'a': range(3), 'b': range(3), 'c': ['a', 'a', 'b']})
+        >>> tl.sql("SELECT a, b FROM self WHERE a > 1")
+        '''
+        return super().sql(query=query, table_name=table_name).pipe(_from_polars_lazy)
 
     def summarise(self, *args, **kwargs):
         """Alias for `.summarize()`"""
