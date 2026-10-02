@@ -1,3 +1,7 @@
+# 0.12.1
++ Minor fixes in `__dir__` of `TibbleFrame` and `TibbleLazy`
++ Modify `__init__.py`
+
 # 0.12.0
 + Added `remove` to `TibbleGroupBy` and `TibbleLazyGroupBy`
 + Added `sql` and `SQLContext`

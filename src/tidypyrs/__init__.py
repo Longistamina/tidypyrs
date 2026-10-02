@@ -1,35 +1,334 @@
+"""Public API for tidypyrs."""
+
 from importlib.metadata import PackageNotFoundError, version
 
 try:
     __version__ = version("tidypyrs")
 except PackageNotFoundError:
-    __version__ = "0.1.0"
+    # Used only when the source tree is imported without installing the package.
+    __version__ = "0.0.0"
 
-from . import f_namespace as _f_namespace
-from . import funs as _funs
-from . import lubridate as _lubridate
-from . import reexports as _reexports
-from . import stringr as _stringr
-from . import tibble_frame as _tibble_frame
-from . import tibble_lazy as _tibble_lazy
-from . import tidyselect as _tidyselect
-from .f_namespace import *
-from .funs import *
-from .lubridate import *
-from .reexports import *
-from .stringr import *
-from .tibble_frame import *
-from .tibble_lazy import *
-from .tidyselect import *
+# Frame reference namespace
+from .f_namespace import f as f  # noqa: I001
 
-__all__ = [
+# General functions
+from .funs import (
+    abs as abs,
+    across as across,
+    as_boolean as as_boolean,
+    as_categorical as as_categorical,
+    as_enum as as_enum,
+    as_factor as as_factor,
+    as_float as as_float,
+    as_integer as as_integer,
+    as_ordered as as_ordered,
+    as_string as as_string,
+    between as between,
+    case_when as case_when,
+    cast as cast,
+    coalesce as coalesce,
+    cor as cor,
+    count as count,
+    cov as cov,
+    desc as desc,
+    first as first,
+    floor as floor,
+    from_pandas as from_pandas,
+    from_polars as from_polars,
+    if_else as if_else,
+    is_finite as is_finite,
+    is_in as is_in,
+    is_infinite as is_infinite,
+    is_nan as is_nan,
+    is_not as is_not,
+    is_not_in as is_not_in,
+    is_not_null as is_not_null,
+    is_null as is_null,
+    lag as lag,
+    last as last,
+    lead as lead,
+    length as length,
+    log as log,
+    log10 as log10,
+    max as max,
+    mean as mean,
+    median as median,
+    min as min,
+    n as n,
+    n_distinct as n_distinct,
+    quantile as quantile,
+    read_csv as read_csv,
+    read_excel as read_excel,
+    read_parquet as read_parquet,
+    rep as rep,
+    replace_null as replace_null,
+    round as round,
+    row_number as row_number,
+    scan_csv as scan_csv,
+    sd as sd,
+    sqrt as sqrt,
+    sum as sum,
+    var as var,
+)
+
+# Datetime helpers
+from .lubridate import (
+    as_date as as_date,
+    as_datetime as as_datetime,
+    dt_round as dt_round,
+    hour as hour,
+    make_date as make_date,
+    make_datetime as make_datetime,
+    mday as mday,
+    minute as minute,
+    month as month,
+    quarter as quarter,
+    second as second,
+    wday as wday,
+    week as week,
+    yday as yday,
+    year as year,
+)
+
+# Polars re-exports and SQL integration
+from .reexports import (
+    Array as Array,
+    Binary as Binary,
+    Boolean as Boolean,
+    Categories as Categories,
+    Categorical as Categorical,
+    Config as Config,
+    Date as Date,
+    Datetime as Datetime,
+    Decimal as Decimal,
+    Duration as Duration,
+    Enum as Enum,
+    Expr as Expr,
+    Field as Field,
+    Float32 as Float32,
+    Float64 as Float64,
+    Int8 as Int8,
+    Int16 as Int16,
+    Int32 as Int32,
+    Int64 as Int64,
+    List as List,
+    Null as Null,
+    Object as Object,
+    SQLContext as SQLContext,
+    Series as Series,
+    String as String,
+    Struct as Struct,
+    Time as Time,
+    UInt8 as UInt8,
+    UInt16 as UInt16,
+    UInt32 as UInt32,
+    UInt64 as UInt64,
+    all as all,
+    col as col,
+    concat_list as concat_list,
+    element as element,
+    exclude as exclude,
+    lit as lit,
+    nth as nth,
+    selectors as selectors,
+    sql as sql,
+    sql_expr as sql_expr,
+    struct as struct,
+    when as when,
+)
+
+# String helpers
+from .stringr import (
+    str_concat as str_concat,
+    str_detect as str_detect,
+    str_ends as str_ends,
+    str_extract as str_extract,
+    str_length as str_length,
+    str_paste as str_paste,
+    str_paste0 as str_paste0,
+    str_remove as str_remove,
+    str_remove_all as str_remove_all,
+    str_replace as str_replace,
+    str_replace_all as str_replace_all,
+    str_starts as str_starts,
+    str_sub as str_sub,
+    str_to_lower as str_to_lower,
+    str_to_upper as str_to_upper,
+    str_trim as str_trim,
+)
+
+# Frame classes and conversion helpers
+from .tibble_frame import TibbleFrame as TibbleFrame
+from .tibble_frame import as_tf as as_tf
+from .tibble_frame import is_tf as is_tf
+from .tibble_lazy import TibbleLazy as TibbleLazy
+from .tibble_lazy import as_tl as as_tl
+from .tibble_lazy import is_tl as is_tl
+
+# Tidyselect helpers
+from .tidyselect import (
+    contains as contains,
+    ends_with as ends_with,
+    everything as everything,
+    starts_with as starts_with,
+    where as where,
+)
+
+__all__ = [  # noqa: RUF022
     "__version__",
-    *_f_namespace.__all__,
-    *_funs.__all__,
-    *_lubridate.__all__,
-    *_reexports.__all__,
-    *_stringr.__all__,
-    *_tibble_frame.__all__,
-    *_tibble_lazy.__all__,
-    *_tidyselect.__all__,
+    # Frame reference namespace
+    "f",
+    # General functions
+    "abs",
+    "across",
+    "case_when",
+    "coalesce",
+    "desc",
+    "floor",
+    "if_else",
+    "lag",
+    "lead",
+    "log",
+    "log10",
+    "rep",
+    "replace_null",
+    "round",
+    "row_number",
+    "sqrt",
+    # Readers and converters
+    "read_csv",
+    "read_parquet",
+    "read_excel",
+    "scan_csv",
+    "from_pandas",
+    "from_polars",
+    # Aggregate functions
+    "cor",
+    "cov",
+    "count",
+    "first",
+    "last",
+    "length",
+    "max",
+    "mean",
+    "median",
+    "min",
+    "n",
+    "n_distinct",
+    "quantile",
+    "sd",
+    "sum",
+    "var",
+    # Predicates
+    "between",
+    "is_finite",
+    "is_in",
+    "is_infinite",
+    "is_nan",
+    "is_not",
+    "is_not_in",
+    "is_not_null",
+    "is_null",
+    # Type conversion
+    "as_boolean",
+    "as_categorical",
+    "as_enum",
+    "as_factor",
+    "as_float",
+    "as_integer",
+    "as_ordered",
+    "as_string",
+    "cast",
+    # Datetime helpers
+    "as_date",
+    "as_datetime",
+    "dt_round",
+    "hour",
+    "make_date",
+    "make_datetime",
+    "mday",
+    "minute",
+    "month",
+    "quarter",
+    "second",
+    "wday",
+    "week",
+    "yday",
+    "year",
+    # Polars expressions
+    "all",
+    "col",
+    "concat_list",
+    "element",
+    "exclude",
+    "lit",
+    "nth",
+    "struct",
+    "when",
+    "Expr",
+    "Series",
+    "selectors",
+    # Polars data types
+    "Decimal",
+    "Int8",
+    "Int16",
+    "Int32",
+    "Int64",
+    "UInt8",
+    "UInt16",
+    "UInt32",
+    "UInt64",
+    "Float32",
+    "Float64",
+    "Boolean",
+    "Binary",
+    "String",
+    "Array",
+    "List",
+    "Field",
+    "Struct",
+    "Time",
+    "Date",
+    "Datetime",
+    "Duration",
+    "Categories",
+    "Categorical",
+    "Enum",
+    "Object",
+    "Null",
+    # SQL and configuration
+    "sql",
+    "sql_expr",
+    "SQLContext",
+    "Config",
+    # String helpers
+    "str_length",
+    "str_to_lower",
+    "str_to_upper",
+    "str_concat",
+    "str_paste",
+    "str_paste0",
+    "str_detect",
+    "str_starts",
+    "str_ends",
+    "str_replace",
+    "str_replace_all",
+    "str_extract",
+    "str_sub",
+    "str_remove_all",
+    "str_remove",
+    "str_trim",
+    # Frames
+    "TibbleFrame",
+    "as_tf",
+    "is_tf",
+    "TibbleLazy",
+    "as_tl",
+    "is_tl",
+    # Tidyselect helpers
+    "contains",
+    "ends_with",
+    "everything",
+    "starts_with",
+    "where",
 ]

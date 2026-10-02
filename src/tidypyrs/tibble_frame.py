@@ -129,6 +129,7 @@ class TibbleFrame(pl.DataFrame):
             "slice_head",
             "slice_tail",
             "sql",
+            "summarise",
             "summarize",
             "tail",
             "transpose",
