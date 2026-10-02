@@ -1,3 +1,7 @@
+# 0.12.0
++ Added `remove` to `TibbleGroupBy` and `TibbleLazyGroupBy`
++ Added `sql` and `SQLContext`
+
 # 0.11.0
 + Added `map_groups` to `TibbleGroupBy` and `TibbleLazyGroupBy`
 + Added deferred `f.schema`
