@@ -1,3 +1,6 @@
+# 0.13.2
++ Add `shape` property for `TibbleFrame`
+
 # 0.13.1
 + Remove `tp.length()`, keep only `tp.count()`
 + Rename `tp.n()` to `tp.len()`
