@@ -178,7 +178,7 @@ def _mutate_cols(frame, exprs, over, parallel):
 # ======================================================
 
 
-def _select_cols(frame, exprs):
+def _select_cols(frame, exprs, parallel=True):
     resolved_exprs = []
 
     for expr in exprs:
@@ -190,7 +190,10 @@ def _select_cols(frame, exprs):
         else:
             resolved_exprs.append(expr)
 
-    return frame.select(*resolved_exprs)
+    if parallel:
+        return frame.select(*resolved_exprs)
+
+    return frame.select_seq(*resolved_exprs)
 
 
 # ======================================================

@@ -130,6 +130,7 @@ from .reexports import (
     exclude as exclude,
     lit as lit,
     nth as nth,
+    select as select,
     selectors as selectors,
     sql as sql,
     sql_expr as sql_expr,

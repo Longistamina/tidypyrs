@@ -7,8 +7,6 @@ from typing import cast
 
 import polars as pl
 
-from tidypyrs.tibble_frame import TibbleFrame
-
 from .groupby import TibbleLazyGroupBy
 from .reexports import *
 from .stringr import str_concat
@@ -206,14 +204,17 @@ class TibbleLazy(pl.LazyFrame):
         self.__class__ = pl.LazyFrame
         return cast(pl.LazyFrame, self)
 
-    def bind_cols(self, *args):
+    def bind_cols(self, *args, parallel=True):
         """
         Bind data frames by columns
 
         Parameters
         ----------
-        tl : tibble
-            Data frame to bind
+        *args : TibbleFrame | TibbleLazy
+            frame to bind
+
+        parallel: bool
+            Evaluate in parallel execution or not
 
         Examples
         --------
@@ -221,20 +222,24 @@ class TibbleLazy(pl.LazyFrame):
         >>> tl2 = tp.TibbleLazy({'a': ['c', 'c', 'c'], 'b': range(4, 7)})
         >>> tl1.bind_cols(tl2)
         """
-        frames = _as_list(args)
-        out = self.as_polars()
-        for frame in frames:
-            out = out.hstack(frame)
+        frames = [self.as_polars()]
+        for frame in _as_list(args):
+            frames.append(frame.as_polars())
+
+        out = pl.concat(frames, how="horizontal_extend", parallel=parallel)
         return out.pipe(_from_polars_lazy)
 
-    def bind_rows(self, *args):
+    def bind_rows(self, *args, parallel=True):
         """
         Bind data frames by row
 
         Parameters
         ----------
-        *args : tibble, list
-            Data frames to bind by row
+        *args : TibbleFrame | TibbleLazy
+            frame to bind
+
+        parallel: bool
+            Evaluate in parallel execution or not
 
         Examples
         --------
@@ -242,8 +247,11 @@ class TibbleLazy(pl.LazyFrame):
         >>> tl2 = tp.TibbleLazy({'x': ['c', 'c', 'c'], 'y': range(4, 7)})
         >>> tl1.bind_rows(tl2)
         """
-        frames = _as_list(args)
-        out = pl.concat([self, *frames], how="diagonal")
+        frames = [self.as_polars()]
+        for frame in _as_list(args):
+            frames.append(frame.as_polars())
+
+        out = pl.concat(frames, how="diagonal_relaxed", parallel=parallel)
         return out.pipe(_from_polars_lazy)
 
     def clone(self):
@@ -1188,7 +1196,7 @@ class TibbleLazy(pl.LazyFrame):
         rename_dict = {k: v for k, v in zip(self.colnames, nm)}
         return self.rename(rename_dict)
 
-    def select(self, *args, **kwargs):
+    def select(self, *args, parallel=True, **kwargs):
         """
         Select or drop columns
 
@@ -1197,14 +1205,20 @@ class TibbleLazy(pl.LazyFrame):
         *args : str, Expr
             Columns to select
 
+        parallel : bool, default True
+            Evaluate all expressions in parallel against the original frame.
+
+            Set this to False when a later expression depends on a column
+            created earlier in the same ``select()`` call.
+
         Examples
         --------
         >>> tl = tp.TibbleLazy({'a': range(3), 'b': range(3), 'c': ['a', 'a', 'b']})
         >>> tl.select('a', 'b')
-        >>> tl.select(col('a'), col('b'))
+        >>> tl.select(col('a'), col('b'), parallel=False)
         """
         exprs = _as_list(args) + _kwargs_as_exprs(kwargs)
-        out = _select_cols(frame=self.as_polars(), exprs=exprs)
+        out = _select_cols(frame=self.as_polars(), exprs=exprs, parallel=parallel)
         return out.pipe(_from_polars_lazy)
 
     def slice(self, *args, start: int|None = None, step: int = 1, over=None):
