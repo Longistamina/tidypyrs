@@ -1,3 +1,7 @@
+# 0.13.1
++ Remove `tp.length()`, keep only `tp.count()`
++ Rename `tp.n()` to `tp.len()`
+
 # 0.13.0
 + Add `parallel` parameter for `.select()` method
 + Reexport `tp.select()`
