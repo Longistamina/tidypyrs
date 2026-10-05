@@ -240,14 +240,17 @@ class TibbleFrame(pl.DataFrame):
         self.__class__ = pl.DataFrame
         return cast(pl.DataFrame, self)
 
-    def bind_cols(self, *args):
+    def bind_cols(self, *args, parallel=True):
         """
         Bind data frames by columns
 
         Parameters
         ----------
-        tf : tibble
-            Data frame to bind
+        *args : TibbleFrame | TibbleLazy
+            frame to bind
+
+        parallel: bool
+            Evaluate in parallel execution or not
 
         Examples
         --------
@@ -255,20 +258,24 @@ class TibbleFrame(pl.DataFrame):
         >>> tf2 = tp.TibbleFrame({'a': ['c', 'c', 'c'], 'b': range(4, 7)})
         >>> tf1.bind_cols(tf2)
         """
-        frames = _as_list(args)
-        out = self.as_polars()
-        for frame in frames:
-            out = out.hstack(frame)
+        frames = [self.as_polars()]
+        for frame in _as_list(args):
+            frames.append(frame.as_polars())
+
+        out = pl.concat(frames, how="horizontal_extend", parallel=parallel)
         return out.pipe(_from_polars_frame)
 
-    def bind_rows(self, *args):
+    def bind_rows(self, *args, parallel=True):
         """
         Bind data frames by row
 
         Parameters
         ----------
-        *args : tibble, list
-            Data frames to bind by row
+        *args : TibbleFrame | TibbleLazy
+            frame to bind
+
+        parallel: bool
+            Evaluate in parallel execution or not
 
         Examples
         --------
@@ -276,8 +283,11 @@ class TibbleFrame(pl.DataFrame):
         >>> tf2 = tp.TibbleFrame({'x': ['c', 'c', 'c'], 'y': range(4, 7)})
         >>> tf1.bind_rows(tf2)
         """
-        frames = _as_list(args)
-        out = pl.concat([self, *frames], how="diagonal")
+        frames = [self.as_polars()]
+        for frame in _as_list(args):
+            frames.append(frame.as_polars())
+
+        out = pl.concat(frames, how="diagonal_relaxed", parallel=parallel)
         return out.pipe(_from_polars_frame)
 
     def clone(self):
@@ -1255,7 +1265,7 @@ class TibbleFrame(pl.DataFrame):
         rename_dict = {k: v for k, v in zip(self.colnames, nm)}
         return self.rename(rename_dict)
 
-    def select(self, *args, **kwargs):
+    def select(self, *args, parallel=True, **kwargs):
         """
         Select or drop columns
 
@@ -1264,14 +1274,20 @@ class TibbleFrame(pl.DataFrame):
         *args : str, Expr
             Columns to select
 
+        parallel : bool, default True
+            Evaluate all expressions in parallel against the original frame.
+
+            Set this to False when a later expression depends on a column
+            created earlier in the same ``select()`` call.
+
         Examples
         --------
         >>> tf = tp.TibbleFrame({'a': range(3), 'b': range(3), 'c': ['a', 'a', 'b']})
         >>> tf.select('a', 'b')
-        >>> tf.select(col('a'), col('b'))
+        >>> tf.select(col('a'), col('b'), parallel=False)
         """
         exprs = _as_list(args) + _kwargs_as_exprs(kwargs)
-        out = _select_cols(frame=self.as_polars(), exprs=exprs)
+        out = _select_cols(frame=self.as_polars(), exprs=exprs, parallel=parallel)
         return out.pipe(_from_polars_frame)
 
     def slice(self, *args, start: int|None = None, step: int = 1, over=None):

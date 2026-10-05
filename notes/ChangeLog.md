@@ -1,3 +1,8 @@
+# 0.13.0
++ Add `parallel` parameter for `.select()` method
++ Reexport `tp.select()`
++ Modify `bind_cols` and `bind_rows`
+
 # 0.12.1
 + Minor fixes in `__dir__` of `TibbleFrame` and `TibbleLazy`
 + Modify `__init__.py`

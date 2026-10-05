@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import polars as pl
 
@@ -15,6 +15,7 @@ __all__ = [  # noqa: RUF022
     "exclude",
     "lit",
     "nth",
+    "select",
     "struct",
     "when",
     # Experession types
@@ -66,6 +67,19 @@ element = pl.element
 exclude = pl.exclude
 lit = pl.lit
 nth = pl.nth
+
+# tp.select()
+@overload
+def select(*exprs: Any, eager: Literal[True] = True, **named_exprs: Any) -> "TibbleFrame": ...
+
+@overload
+def select(*exprs: Any, eager: Literal[False], **named_exprs: Any) -> "TibbleLazy": ...
+
+def select(*exprs: Any, eager: bool = True, **named_exprs: Any) -> "TibbleFrame | TibbleLazy":
+    return _wrap_result(
+        pl.select(*exprs, eager=eager, **named_exprs)
+    )
+
 struct = pl.struct
 when = pl.when
 
@@ -121,13 +135,6 @@ Object = pl.Object
 Null = pl.Null
 
 # sql related
-def _wrap_sql_result(out: pl.DataFrame | pl.LazyFrame,) -> "TibbleFrame | TibbleLazy":
-    if isinstance(out, pl.LazyFrame):
-        from .tibble_lazy import as_tl
-        return as_tl(out)
-    from .tibble_frame import as_tf
-    return as_tf(out)
-
 @overload
 def sql(query: str, *, eager: Literal[True],) -> "TibbleFrame": ...
 
@@ -135,7 +142,18 @@ def sql(query: str, *, eager: Literal[True],) -> "TibbleFrame": ...
 def sql(query: str, *, eager: Literal[False] = False,) -> "TibbleLazy": ...
 
 def sql(query: str, *, eager: bool = False,) -> "TibbleFrame | TibbleLazy":
-    return _wrap_sql_result(
+    '''
+    Execute a SQL query against frames in the global namespace.
+
+    Parameters
+    ----------
+    query
+        SQL query to execute.
+
+    eager
+        Automatically collect the result and return a DataFrame instead of a LazyFrame.
+    '''
+    return _wrap_result(
         pl.sql(query=query, eager=eager)
     )
 
@@ -155,7 +173,7 @@ class SQLContext(pl.SQLContext):
 
     def execute(self, query: str, *, eager: bool | None = None) -> "TibbleFrame | TibbleLazy":
         out = super().execute(query=query, eager=eager)
-        return _wrap_sql_result(out)
+        return _wrap_result(out)
 
     @classmethod
     @overload
@@ -171,6 +189,14 @@ class SQLContext(pl.SQLContext):
             query=query,
             eager=eager,
         )
-        return _wrap_sql_result(out)
+        return _wrap_result(out)
 # Config
 Config = pl.Config
+
+# wrapt output to TibbleFrame or TibbleLazy
+def _wrap_result(out: pl.DataFrame | pl.LazyFrame,) -> "TibbleFrame | TibbleLazy":
+    if isinstance(out, pl.LazyFrame):
+        from .tibble_lazy import as_tl
+        return as_tl(out)
+    from .tibble_frame import as_tf
+    return as_tf(out)
