@@ -49,12 +49,11 @@ __all__ = [  # noqa: RUF022
     "count",
     "first",
     "last",
-    "length",
+    "len",
     "max",
     "mean",
     "median",
     "min",
-    "n",
     "n_distinct",
     "quantile",
     "sd",
@@ -516,7 +515,7 @@ def cov(x, y):
 
 def count(x):
     """
-    Number of observations in each group
+    Number of non-null observations in given column(s)
 
     Parameters
     ----------
@@ -867,23 +866,6 @@ def lead(x, n: int = 1, default=None):
     return x.shift(-n, fill_value=default)
 
 
-def length(x):
-    """
-    Number of observations in each group
-
-    Parameters
-    ----------
-    x : Expr, Series
-        Column to operate on
-
-    Examples
-    --------
-    >>> tf.summarize(length = tp.length(col('x')))
-    """
-    x = _col_expr(x)
-    return x.count()
-
-
 def log(x):
     """
     Compute the natural logarithm of a column
@@ -990,13 +972,13 @@ def min(x):
     return x.min()
 
 
-def n():
+def len():
     """
-    Number of observations in each group
+    Number of rows (both null and non-null values)
 
     Examples
     --------
-    >>> tf.summarize(count = tp.n())
+    >>> tf.summarize(count = tp.len())
     """
     return pl.len()
 
