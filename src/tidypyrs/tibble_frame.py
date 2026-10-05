@@ -1564,6 +1564,16 @@ class TibbleFrame(pl.DataFrame):
         """
         return super().plot
 
+    @property
+    def shape(self):
+        """
+        Get the shape = (nrow, ncol)
+
+        Examples
+        --------
+        >>> tf.shape
+        """
+        return super().shape
 
 ##--------------------------------------------------------------------------------------##
 
@@ -1646,7 +1656,6 @@ _polars_methods = [
     "rows",
     "sample",
     "select_at_idx",
-    "shape",
     "shift",
     "shift_and_fill",
     "shrink_to_fit",
