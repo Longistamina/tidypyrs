@@ -1,3 +1,8 @@
+# 0.14.0
++ Add `tp.bind_cols` and `tp.bind_rows`
++ Modify behaviour of `select` and `mutate` to accept `Series`
++ Change `sd` to `std`
+
 # 0.13.2
 + Add `shape` property for `TibbleFrame`
 
