@@ -1,3 +1,6 @@
+# 0.14.1
++ Minor fix for `select`
+
 # 0.14.0
 + Add `tp.bind_cols` and `tp.bind_rows`
 + Modify behaviour of `select` and `mutate` to accept `Series`
