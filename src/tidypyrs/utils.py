@@ -201,12 +201,16 @@ def _select_cols(frame, exprs, parallel=True):
     resolved_exprs = []
 
     for expr in exprs:
-        if isinstance(expr, _Deferred):
+        was_deferred = isinstance(expr, _Deferred)
+
+        if was_deferred:
             expr = expr.resolve(frame)
 
-        if _is_series(expr) and expr.dtype == pl.String:
+        # f.colnames and similar deferred name selections
+        if (was_deferred and isinstance(expr, pl.Series) and expr.dtype == pl.String):
             resolved_exprs.extend(expr.to_list())
         else:
+            # A directly supplied Series remains a real output column.
             resolved_exprs.append(expr)
 
     if parallel:
