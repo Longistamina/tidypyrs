@@ -13,6 +13,7 @@ from .stringr import str_concat
 from .tidyselect import everything
 from .utils import (
     _as_list,
+    _as_list_expr,
     _col_exprs,
     _is_expr,
     _is_string,
@@ -821,7 +822,7 @@ class TibbleLazy(pl.LazyFrame):
         ...     parallel=False,
         ... )
         """
-        exprs = _as_list(args) + _kwargs_as_exprs(kwargs)
+        exprs = _as_list_expr(args) + _kwargs_as_exprs(kwargs)
         out = _mutate_cols(frame=self.as_polars(), exprs=exprs, over=over, parallel=parallel)
         return out.pipe(_from_polars_lazy)
 
@@ -1217,7 +1218,7 @@ class TibbleLazy(pl.LazyFrame):
         >>> tl.select('a', 'b')
         >>> tl.select(col('a'), col('b'), parallel=False)
         """
-        exprs = _as_list(args) + _kwargs_as_exprs(kwargs)
+        exprs = _as_list_expr(args) + _kwargs_as_exprs(kwargs)
         out = _select_cols(frame=self.as_polars(), exprs=exprs, parallel=parallel)
         return out.pipe(_from_polars_lazy)
 

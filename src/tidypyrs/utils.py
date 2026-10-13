@@ -1,10 +1,15 @@
 from itertools import chain
 from operator import not_
+from typing import TYPE_CHECKING
 
 import polars as pl
 import polars.selectors as cs
 
 from .f_namespace import _Deferred
+
+if TYPE_CHECKING:
+    from .tibble_frame import TibbleFrame
+    from .tibble_lazy import TibbleLazy
 
 __all__ = []
 
@@ -116,6 +121,20 @@ def _as_list(x):
     return [x]
 
 
+def _as_list_expr(args):
+    """
+    Normalize positional expression arguments without expanding Series.
+    """
+    exprs = []
+    for arg in args:
+        if isinstance(arg, (list, tuple)):
+            exprs.extend(arg)
+        else:
+            exprs.append(arg)
+
+    return exprs
+
+
 def _repeat(x, times):
     if not_(_is_list(x)):  # ensure x is a list
         x = [x]
@@ -222,3 +241,14 @@ def _col_exprs(x):
 # Convert kwargs to col() expressions with alias
 def _kwargs_as_exprs(kwargs):
     return [_lit_expr(expr).alias(key) for key, expr in kwargs.items()]
+
+# ======================================================
+# Wrapt output to TibbleFrame or TibbleLazy
+# ======================================================
+
+def _wrap_result(out: pl.DataFrame | pl.LazyFrame,) -> "TibbleFrame | TibbleLazy":
+    if isinstance(out, pl.LazyFrame):
+        from .tibble_lazy import as_tl
+        return as_tl(out)
+    from .tibble_frame import as_tf
+    return as_tf(out)

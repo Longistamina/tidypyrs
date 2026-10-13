@@ -6,16 +6,7 @@ import polars as pl
 from .f_namespace import _defer_aware
 from .tibble_frame import TibbleFrame
 from .tibble_lazy import TibbleLazy
-from .utils import (
-    _as_list,
-    _col_expr,
-    _col_exprs,
-    _is_constant,
-    _is_iterable,
-    _is_list,
-    _is_series,
-    _str_to_lit,
-)
+from .utils import _as_list, _col_expr, _col_exprs, _is_constant, _is_iterable, _is_list, _is_series, _str_to_lit, _wrap_result
 
 __all__ = [  # noqa: RUF022
     # General functions
@@ -40,6 +31,9 @@ __all__ = [  # noqa: RUF022
     "read_parquet",
     "read_excel",
     "scan_csv",
+    # bindings
+    "bind_cols",
+    "bind_rows"
     # convert from pandas and polars,
     "from_pandas",
     "from_polars",
@@ -56,7 +50,7 @@ __all__ = [  # noqa: RUF022
     "min",
     "n_distinct",
     "quantile",
-    "sd",
+    "std",
     "sum",
     "var",
     # Predicates
@@ -371,6 +365,58 @@ def abs(x):
     """
     x = _col_expr(x)
     return x.abs()
+
+
+def bind_cols(items: list[TibbleFrame|TibbleLazy] | tuple[TibbleFrame|TibbleLazy], *, parallel=True) -> TibbleFrame|TibbleLazy:
+    """
+    Bind data frames by columns
+
+    Parameters
+    ----------
+    items : list or tuple of TibbleFrame/TibbleLazy
+        frames to bind
+
+    parallel: bool
+        Evaluate in parallel execution or not
+
+    Examples
+    --------
+    >>> tl1 = tp.TibbleLazy({'x': ['a', 'a', 'b'], 'y': range(3)})
+    >>> tl2 = tp.TibbleLazy({'a': ['c', 'c', 'c'], 'b': range(4, 7)})
+    >>> tp.bind_cols([tl1, tl2])
+    """
+    frames = []
+    for frame in items:
+        frames.append(frame.as_polars())
+
+    out = pl.concat(frames, how="horizontal_extend", parallel=parallel)
+    return _wrap_result(out)
+
+
+def bind_rows(items: list[TibbleFrame|TibbleLazy] | tuple[TibbleFrame|TibbleLazy], *, parallel=True) -> TibbleFrame|TibbleLazy:
+    """
+    Bind data frames by rows
+
+    Parameters
+    ----------
+    items : list or tuple of TibbleFrame/TibbleLazy
+        frames to bind
+
+    parallel: bool
+        Evaluate in parallel execution or not
+
+    Examples
+    --------
+    >>> tl1 = tp.TibbleLazy({'x': ['a', 'a', 'b'], 'y': range(3)})
+    >>> tl2 = tp.TibbleLazy({'x': ['c', 'c', 'c'], 'y': range(4, 7)})
+    >>> tp.bind_rows([tl1, tl2])
+    """
+    frames = []
+    for frame in items:
+        frames.append(frame.as_polars())
+
+    out = pl.concat(frames, how="diagonal_relaxed", parallel=parallel)
+    return _wrap_result(out)
 
 
 def between(x, left, right):
@@ -1128,7 +1174,7 @@ def row_number():
     return pl.int_range(0, pl.len()) + 1
 
 
-def sd(x):
+def std(x):
     """
     Get column standard deviation
 
@@ -1139,8 +1185,8 @@ def sd(x):
 
     Examples
     --------
-    >>> tf.summarize(sd_x = tp.sd('x'))
-    >>> tf.summarize(sd_x = tp.sd(col('x')))
+    >>> tf.summarize(std_x = tp.std('x'))
+    >>> tf.summarize(std_x = tp.std(col('x')))
     """
     x = _col_expr(x)
     return x.std()

@@ -6,6 +6,8 @@ if TYPE_CHECKING:
     from .tibble_frame import TibbleFrame
     from .tibble_lazy import TibbleLazy
 
+from .utils import _wrap_result
+
 __all__ = [  # noqa: RUF022
     # Experessions
     "all",
@@ -192,11 +194,3 @@ class SQLContext(pl.SQLContext):
         return _wrap_result(out)
 # Config
 Config = pl.Config
-
-# wrapt output to TibbleFrame or TibbleLazy
-def _wrap_result(out: pl.DataFrame | pl.LazyFrame,) -> "TibbleFrame | TibbleLazy":
-    if isinstance(out, pl.LazyFrame):
-        from .tibble_lazy import as_tl
-        return as_tl(out)
-    from .tibble_frame import as_tf
-    return as_tf(out)
