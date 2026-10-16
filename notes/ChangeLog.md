@@ -1,3 +1,6 @@
+# 0.15.0
++ Add horizontal aggregations: any, all, sum, mean, cum_sum, min, max
+
 # 0.14.1
 + Minor fix for `select`
 

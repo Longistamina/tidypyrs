@@ -33,7 +33,7 @@ __all__ = [  # noqa: RUF022
     "scan_csv",
     # bindings
     "bind_cols",
-    "bind_rows"
+    "bind_rows",
     # convert from pandas and polars,
     "from_pandas",
     "from_polars",

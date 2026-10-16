@@ -57,6 +57,14 @@ __all__ = [  # noqa: RUF022
     "sql",
     "sql_expr",
     "SQLContext",
+    # horizontal aggregations
+    "all_horizontal",
+    "any_horizontal",
+    "sum_horizontal",
+    "cum_sum_horizontal",
+    "mean_horizontal",
+    "min_horizontal",
+    "max_horizontal",
     # Config
     "Config",
 ]
@@ -192,5 +200,15 @@ class SQLContext(pl.SQLContext):
             eager=eager,
         )
         return _wrap_result(out)
+
+# horizontal aggregations
+all_horizontal = pl.all_horizontal
+any_horizontal = pl.any_horizontal
+sum_horizontal = pl.sum_horizontal
+mean_horizontal = pl.mean_horizontal
+cum_sum_horizontal = pl.cum_sum_horizontal
+min_horizontal = pl.min_horizontal
+max_horizontal = pl.max_horizontal
+
 # Config
 Config = pl.Config
