@@ -6,6 +6,7 @@ if TYPE_CHECKING:
     from .tibble_frame import TibbleFrame
     from .tibble_lazy import TibbleLazy
 
+from . import selectors
 from .utils import _wrap_result
 
 __all__ = [  # noqa: RUF022
@@ -102,9 +103,6 @@ class Series(pl.Series):
 
         out = super().to_frame(name=name)
         return _from_polars_frame(out)
-
-# Selectors
-selectors = pl.selectors
 
 # dtypes
 Decimal = pl.Decimal

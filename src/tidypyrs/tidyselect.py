@@ -2,6 +2,8 @@ import re
 
 import polars.selectors as cs
 
+from .utils import _as_list
+
 __all__ = ["contains", "ends_with", "everything", "starts_with", "where"]
 
 
@@ -83,17 +85,32 @@ def everything():
 
 
 _col_types = {
+    "alpha": cs.alpha(),
+    "alphanum": cs.alphanumeric(),
+    "alphanumeric": cs.alphanumeric(),
+    "bin": cs.binary(),
+    "binary": cs.binary(),
+    "bool": cs.boolean(),
+    "boolean": cs.boolean(),
     "date": cs.date(),
     "datetime": cs.datetime(),
+    "decimal": cs.decimal(),
+    "digit": cs.digit(),
     "temporal": cs.temporal(),
     "float": cs.float(),
     "integer": cs.integer(),
+    "sint": cs.signed_integer(),
+    "signed_integer": cs.signed_integer(),
+    "uint": cs.unsigned_integer(),
+    "unsigned_integer": cs.unsigned_integer(),
     "numeric": cs.numeric(),
     "string": cs.string(),
     "categorical": cs.categorical(),
     "factor": cs.categorical(),
     "ordered": cs.enum(),
     "enum": cs.enum(),
+    "first": cs.first(),
+    "last": cs.last()
 }
 
 
@@ -102,8 +119,32 @@ def where(col_type):
     Select columns by type using a string
 
     Options:
-        date, datetime, float, integer,
-        numeric, string
+    "alpha": cs.alpha(),
+    "alphanum": cs.alphanumeric(),
+    "alphanumeric": cs.alphanumeric(),
+    "bin": cs.binary(),
+    "binary": cs.binary(),
+    "bool": cs.boolean(),
+    "boolean": cs.boolean(),
+    "date": cs.date(),
+    "datetime": cs.datetime(),
+    "decimal": cs.decimal(),
+    "digit": cs.digit(),
+    "temporal": cs.temporal(),
+    "float": cs.float(),
+    "integer": cs.integer(),
+    "sint": cs.signed_integer(),
+    "signed_integer": cs.signed_integer(),
+    "uint": cs.unsigned_integer(),
+    "unsigned_integer": cs.unsigned_integer(),
+    "numeric": cs.numeric(),
+    "string": cs.string(),
+    "categorical": cs.categorical(),
+    "factor": cs.categorical(),
+    "ordered": cs.enum(),
+    "enum": cs.enum(),
+    "first": cs.first(),
+    "last": cs.last()
 
     Examples
     --------
@@ -111,3 +152,15 @@ def where(col_type):
     """
     out = _col_types[col_type]
     return out
+
+
+def select_dtypes(*dtypes):
+    """
+    Select columns by type using dtype
+
+    Examples
+    --------
+    >>> tf.select(tp.select_dtypes(tp.String, tp.Categorical))
+    """
+    dtypes = _as_list(dtypes)
+    return cs.by_dtype(*dtypes)
