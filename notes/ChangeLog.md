@@ -1,3 +1,8 @@
+# 0.16.0
++ Add more string options for `tp.where()`
++ Add `tp.select_dtypes`
++ Enable `import tidypyrs.selectors as cs`
+
 # 0.15.0
 + Add horizontal aggregations: any, all, sum, mean, cum_sum, min, max
 

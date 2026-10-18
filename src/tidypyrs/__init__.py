@@ -181,6 +181,7 @@ from .tidyselect import (
     everything as everything,
     starts_with as starts_with,
     where as where,
+    select_dtypes as select_dtypes,
 )
 
 __all__ = [  # noqa: RUF022
@@ -224,7 +225,7 @@ __all__ = [  # noqa: RUF022
     "min",
     "n_distinct",
     "quantile",
-    "sd",
+    "std",
     "sum",
     "var",
     # Predicates
