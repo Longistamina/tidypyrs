@@ -1,3 +1,6 @@
+# 0.17.1
++ Enhance behaviours of `map_groups`
+
 # 0.17.0
 + Remove all join methods, keep `.join()` only
 
