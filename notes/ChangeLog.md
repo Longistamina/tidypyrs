@@ -1,3 +1,6 @@
+# 0.17.0
++ Remove all join methods, keep `.join()` only
+
 # 0.16.0
 + Add more string options for `tp.where()`
 + Add `tp.select_dtypes`
