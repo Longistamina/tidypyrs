@@ -88,6 +88,7 @@ class TibbleLazy(pl.LazyFrame):
             "bind_cols",
             "bind_rows",
             "colnames",
+            "collect",
             "clone",
             "count",
             "describe",
@@ -99,14 +100,11 @@ class TibbleLazy(pl.LazyFrame):
             "fill_nan",
             "fill_null",
             "filter",
-            "full_join",
             "glimpse",
             "group_by",
             "group_by_dynamic",
             "head",
-            "inner_join",
-            "lazy",
-            "left_join",
+            "join",
             "map_columns",
             "mutate",
             "ncol",
@@ -652,99 +650,127 @@ class TibbleLazy(pl.LazyFrame):
         out = super().filter(predicate)
         return out.pipe(_from_polars_lazy)
 
-    def full_join(self, tl, left_on=None, right_on=None, on=None, suffix: str = "_right"):
-        """
-        Perform an full join
-
-        Parameters
-        ----------
-        tl : tibble
-            Lazy DataFrame to join with.
-        left_on : str, list
-            Join column(s) of the left DataFrame.
-        right_on : str, list
-            Join column(s) of the right DataFrame.
-        on: str, list
-            Join column(s) of both DataFrames. If set, `left_on` and `right_on` should be None.
-        suffix : str
-            Suffix to append to columns with a duplicate name.
-
-        Examples
-        --------
-        >>> tl1.full_join(tl2)
-        >>> tl1.full_join(tl2, on = 'x')
-        >>> tl1.full_join(tl2, left_on='left_x', right_on='x')
-        """
-        if (left_on is None) & (right_on is None) & (on is None):
-            on = list(set(self.colnames) & set(tl.colnames))
-        out = super().join(
-            tl,
-            on,
-            "full",
-            left_on=left_on,
-            right_on=right_on,
-            suffix=suffix,
-            coalesce=True,
-        )
-        return out.pipe(_from_polars_lazy)
-
     def head(self, n=5, *, over=None):
         """Alias for `.slice_head()`"""
         return self.slice_head(n, over=over).pipe(_from_polars_lazy)
 
-    def inner_join(self, tl, left_on=None, right_on=None, on=None, suffix="_right"):
+    def join(
+        self,
+        other,
+        on=None,
+        how="inner",
+        *,
+        left_on=None,
+        right_on=None,
+        suffix="_right",
+        validate="m:m",
+        nulls_equal=False,
+        coalesce=None,
+        maintain_order=None,
+        build_side="auto",
+        allow_parallel=True,
+        force_parallel=False,
+    ):
         """
-        Perform an inner join
+        Join with another frame.
 
         Parameters
         ----------
-        tl : tibble
-            Lazy DataFrame to join with.
-        left_on : str, list
-            Join column(s) of the left DataFrame.
-        right_on : str, list
-            Join column(s) of the right DataFrame.
-        on: str, list
-            Join column(s) of both DataFrames. If set, `left_on` and `right_on` should be None.
-        suffix : str
-            Suffix to append to columns with a duplicate name.
+        other : TibbleLazy or LazyFrame
+            Frame to join with.
+
+        on : str, Expr, or sequence, optional
+            Join columns shared by both frames.
+
+            When ``on``, ``left_on``, and ``right_on`` are all omitted,
+            common column names are used automatically.
+
+        how : str, default "inner"
+            Join strategy: ``"inner"``, ``"left"``, ``"right"``,
+            ``"full"``, ``"semi"``, ``"anti"``, or ``"cross"``.
+
+        left_on, right_on : str, Expr, or sequence, optional
+            Join columns for the left and right frames.
+
+        suffix : str, default "_right"
+            Suffix for duplicate column names.
+
+        validate : str, default "m:m"
+            Join validation: ``"m:m"``, ``"1:1"``, ``"1:m"``,
+            or ``"m:1"``.
+
+        nulls_equal : bool, default False
+            Whether null join keys should match.
+
+        coalesce : bool or None, default None
+            Whether matching join-key columns should be merged.
+
+        maintain_order : str or None, optional
+            Row-order preservation strategy.
+
+        build_side : str, default "auto"
+            Preferred hash-join build side.
+
+        allow_parallel : bool, default True
+            Allow both input plans to be evaluated in parallel.
+
+        force_parallel : bool, default False
+            Force both input plans to be evaluated in parallel.
 
         Examples
         --------
-        >>> tl1.inner_join(tl2)
-        >>> tl1.inner_join(tl2, on='x')
-        >>> tl1.inner_join(tl2, left_on='left_x', right_on='x')
+        >>> tl1.join(tl2, on="x")
+        >>> tl1.join(tl2, on="x", how="left")
+        >>> tl1.join(tl2, how="full")
+        >>> tl1.join(tl2, left_on="left_x", right_on="x")
+        >>> tl1.join(tl2, how="cross")
         """
-        if (left_on is None) & (right_on is None) & (on is None):
-            on = list(set(self.colnames) & set(tl.colnames))
-        return super().join(tl, on, "inner", left_on=left_on, right_on=right_on, suffix=suffix).pipe(_from_polars_lazy)
 
-    def left_join(self, tl, left_on=None, right_on=None, on=None, suffix="_right"):
-        """
-        Perform a left join
+        if isinstance(other, pl.DataFrame):
+            other = other.lazy()
+        elif isinstance(other, pl.LazyFrame):
+            other = (other.as_polars() if isinstance(other, TibbleLazy) else other)
+        else:
+            raise TypeError(
+                "`other` must be a TibbleLazy or Polars DataFrame/LazyFrame"
+            )
 
-        Parameters
-        ----------
-        tl : tibble
-            Lazy DataFrame to join with.
-        left_on : str, list
-            Join column(s) of the left DataFrame.
-        right_on : str, list
-            Join column(s) of the right DataFrame.
-        on: str, list
-            Join column(s) of both DataFrames. If set, `left_on` and `right_on` should be None.
-        suffix : str
-            Suffix to append to columns with a duplicate name.
+        no_keys = (
+            on is None
+            and left_on is None
+            and right_on is None
+        )
 
-        Examples
-        --------
-        >>> tl1.left_join(tl2)
-        >>> tl1.left_join(tl2, on='x')
-        >>> tl1.left_join(tl2, left_on='left_x', right_on='x')
-        """
-        if (left_on is None) & (right_on is None) & (on is None):
-            on = list(set(self.colnames) & set(tl.colnames))
-        return super().join(tl, on, "left", left_on=left_on, right_on=right_on, suffix=suffix).pipe(_from_polars_lazy)
+        # Preserve your convenient common-column inference.
+        # Cross joins must not receive join keys.
+        if no_keys and how != "cross":
+            right_names = set(other.collect_schema().names())
+
+            on = [name for name in self.colnames if name in right_names]
+
+            if not on:
+                raise ValueError(
+                    "No common columns were found. Provide `on`, "
+                    "`left_on` and `right_on`, or use how='cross'."
+                )
+
+        out = super().join(
+            other,
+            on=on,
+            how=how,
+            left_on=left_on,
+            right_on=right_on,
+            suffix=suffix,
+            validate=validate,
+            nulls_equal=nulls_equal,
+            coalesce=coalesce,
+            maintain_order=maintain_order,
+            build_side=build_side,
+            allow_parallel=allow_parallel,
+            force_parallel=force_parallel,
+        )
+
+        return out.pipe(_from_polars_lazy)
 
     def map_batches(
         self,
@@ -1525,7 +1551,6 @@ _polars_methods = [
     "interpolate",
     "is_duplicated",
     "is_unique",
-    "join",
     "limit",
     "max",
     "mean",
