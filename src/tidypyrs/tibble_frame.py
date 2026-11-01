@@ -96,7 +96,8 @@ class TibbleFrame(pl.DataFrame):
             "describe",
             "distinct",
             "drop",
-            "drop_null",
+            "drop_nulls",
+            "drop_nans",
             "head",
             "fill",
             "fill_nan",
@@ -132,6 +133,7 @@ class TibbleFrame(pl.DataFrame):
             "summarise",
             "summarize",
             "tail",
+            "to_dummies",
             "transpose",
             "unite",
             "write_csv",
@@ -391,7 +393,30 @@ class TibbleFrame(pl.DataFrame):
         drop_cols = _as_list(args)
         return super().drop(drop_cols, strict=strict).pipe(_from_polars_frame)
 
-    def drop_null(self, *args):
+    def drop_nans(self, *args):
+        """
+        Drop all rows that contain one or more NaN values.
+
+        Parameters
+        ----------
+        *args : str
+            Columns to drop nulls from (defaults to all)
+
+        Examples
+        --------
+        >>> tf = tp.TibbleFrame(x = [1, float('nan'), 3], y = [float('nan'), 'b', 'c'], z = range(3)}
+        >>> tf.drop_nans()
+        >>> tf.drop_nans('x', 'y')
+        """
+        if len(args) == 1 and args[0] is None:
+            subset = None
+        else:
+            subset = _as_list(args)
+            if not subset:
+                subset = None
+        return super().drop_nans(subset=subset).pipe(_from_polars_frame)
+
+    def drop_nulls(self, *args):
         """
         Drop rows containing missing values
 
@@ -403,15 +428,16 @@ class TibbleFrame(pl.DataFrame):
         Examples
         --------
         >>> tf = tp.TibbleFrame(x=[1, None, 3], y=[None, 'b', 'c'], z=range(3)}
-        >>> tf.drop_null()
-        >>> tf.drop_null('x', 'y')
+        >>> tf.drop_nulls()
+        >>> tf.drop_nulls('x', 'y')
         """
-        args = _as_list(args)
-        if len(args) == 0:
-            out = super().drop_nulls()
+        if len(args) == 1 and args[0] is None:
+            subset = None
         else:
-            out = super().drop_nulls(args)
-        return out.pipe(_from_polars_frame)
+            subset = _as_list(args)
+            if not subset:
+                subset = None
+        return super().drop_nulls(subset=subset).pipe(_from_polars_frame)
 
     def equals(self, other, null_equal=True):
         """Check if two tibbles are equal"""
@@ -1234,6 +1260,46 @@ class TibbleFrame(pl.DataFrame):
         replace_exprs = [col(key).fill_null(value) for key, value in replace.items()]
         return self.mutate(*replace_exprs)
 
+    def row_index(self, name: str = "index", offset: int = 0):
+        """
+        A wrapper of `polars.DataFrame.with_row_index()`
+
+        Add a row index as the first column in the DataFrame.
+
+        Parameters
+        ----------
+        name
+            Name of the index column.
+        offset
+            Start the index at this offset. Cannot be negative.
+
+        Notes
+        -----
+        The resulting column does not have any special properties. It is a regular
+        column of type `UInt32` (or `UInt64` in `polars[rt64]`).
+
+        Examples
+        --------
+        >>> tf = tp.TibbleFrame(
+        ...     {
+        ...         "a": [1, 3, 5],
+        ...         "b": [2, 4, 6],
+        ...     }
+        ... )
+        >>> tf.row_index()
+        shape: (3, 3)
+        ┌───────┬─────┬─────┐
+        │ index ┆ a   ┆ b   │
+        │ ---   ┆ --- ┆ --- │
+        │ u32   ┆ i64 ┆ i64 │
+        ╞═══════╪═════╪═════╡
+        │ 0     ┆ 1   ┆ 2   │
+        │ 1     ┆ 3   ┆ 4   │
+        │ 2     ┆ 5   ┆ 6   │
+        └───────┴─────┴─────┘
+        """
+        return super().with_row_index(name, offset).pipe(_from_polars_frame)
+
     def separate(self, sep_col, into, sep="_", remove=True):
         """
         Separate a character column into multiple columns
@@ -1453,6 +1519,55 @@ class TibbleFrame(pl.DataFrame):
         """Alias for `.slice_tail()`"""
         return self.slice_tail(n, over=over).pipe(_from_polars_frame)
 
+    def to_dummies(self, columns=None, *, separator: str = "_", drop_first: bool = False, drop_nulls: bool = False):
+        '''
+        Convert categorical variables into dummy/indicator variables.
+
+        Parameters
+        ----------
+        columns
+            Column name(s) or selector(s) that should be converted to dummy
+            variables. If set to `None` (default), convert all columns.
+        separator
+            Separator/delimiter used when generating column names.
+        drop_first
+            Remove the first category from the variables being encoded.
+        drop_nulls
+            If there are `None` values in the series, a `null` column is not generated
+
+        Examples
+        --------
+        >>> tf = tp.TibbleFrame(
+        ...     {
+        ...         "foo": [1, 2],
+        ...         "bar": [3, 4],
+        ...         "ham": ["a", "b"],
+        ...     }
+        ... )
+        >>> tf.to_dummies()
+        shape: (2, 6)
+        ┌───────┬───────┬───────┬───────┬───────┬───────┐
+        │ foo_1 ┆ foo_2 ┆ bar_3 ┆ bar_4 ┆ ham_a ┆ ham_b │
+        │ ---   ┆ ---   ┆ ---   ┆ ---   ┆ ---   ┆ ---   │
+        │ u8    ┆ u8    ┆ u8    ┆ u8    ┆ u8    ┆ u8    │
+        ╞═══════╪═══════╪═══════╪═══════╪═══════╪═══════╡
+        │ 1     ┆ 0     ┆ 1     ┆ 0     ┆ 1     ┆ 0     │
+        │ 0     ┆ 1     ┆ 0     ┆ 1     ┆ 0     ┆ 1     │
+        └───────┴───────┴───────┴───────┴───────┴───────┘
+
+        >>> tf.to_dummies(drop_first=True)
+        shape: (2, 3)
+        ┌───────┬───────┬───────┐
+        │ foo_2 ┆ bar_4 ┆ ham_b │
+        │ ---   ┆ ---   ┆ ---   │
+        │ u8    ┆ u8    ┆ u8    │
+        ╞═══════╪═══════╪═══════╡
+        │ 0     ┆ 0     ┆ 0     │
+        │ 1     ┆ 1     ┆ 1     │
+        └───────┴───────┴───────┘
+        '''
+        return super().to_dummies(columns=columns, separator=separator, drop_first=drop_first, drop_nulls=drop_nulls).pipe(_from_polars_frame)
+
     def transpose(self, *, include_header: bool = False, header_name: str = "column", column_names=None):
         return super().transpose(include_header=include_header, header_name=header_name, column_names=column_names).pipe(_from_polars_frame)
 
@@ -1488,45 +1603,7 @@ class TibbleFrame(pl.DataFrame):
             out = out.drop(unite_cols)
         return out
 
-    def row_index(self, name: str = "index", offset: int = 0):
-        """
-        A wrapper of `polars.DataFrame.with_row_index()`
 
-        Add a row index as the first column in the DataFrame.
-
-        Parameters
-        ----------
-        name
-            Name of the index column.
-        offset
-            Start the index at this offset. Cannot be negative.
-
-        Notes
-        -----
-        The resulting column does not have any special properties. It is a regular
-        column of type `UInt32` (or `UInt64` in `polars[rt64]`).
-
-        Examples
-        --------
-        >>> tf = tp.TibbleFrame(
-        ...     {
-        ...         "a": [1, 3, 5],
-        ...         "b": [2, 4, 6],
-        ...     }
-        ... )
-        >>> tf.row_index()
-        shape: (3, 3)
-        ┌───────┬─────┬─────┐
-        │ index ┆ a   ┆ b   │
-        │ ---   ┆ --- ┆ --- │
-        │ u32   ┆ i64 ┆ i64 │
-        ╞═══════╪═════╪═════╡
-        │ 0     ┆ 1   ┆ 2   │
-        │ 1     ┆ 3   ┆ 4   │
-        │ 2     ┆ 5   ┆ 6   │
-        └───────┴─────┴─────┘
-        """
-        return super().with_row_index(name, offset).pipe(_from_polars_frame)
 
     def write_csv(self, file=None, has_headers=True, sep=","):
         """Write a data frame to a csv"""
@@ -1644,7 +1721,6 @@ _allowed_methods = ["dtypes", "frame_equal", "get_columns", "lazy", "pipe"]
 _polars_methods = [
     "apply",
     "downsample",
-    "drop_duplicates",
     "explode",
     "find_idx_by_name",
     "fold",
@@ -1679,7 +1755,6 @@ _polars_methods = [
     # 'to_arrow',
     # 'to_dict',
     "to_dicts",
-    "to_dummies",
     "to_ipc",
     "to_json",
     "to_numpy",

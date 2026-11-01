@@ -94,7 +94,8 @@ class TibbleLazy(pl.LazyFrame):
             "describe",
             "distinct",
             "drop",
-            "drop_null",
+            "drop_nulls",
+            "drop_nans",
             "head",
             "fill",
             "fill_nan",
@@ -365,7 +366,30 @@ class TibbleLazy(pl.LazyFrame):
         drop_cols = _as_list(args)
         return super().drop(drop_cols, strict=strict).pipe(_from_polars_lazy)
 
-    def drop_null(self, *args):
+    def drop_nans(self, *args):
+        """
+        Drop all rows that contain one or more NaN values.
+
+        Parameters
+        ----------
+        *args : str
+            Columns to drop nulls from (defaults to all)
+
+        Examples
+        --------
+        >>> tl = tp.TibbleLazy(x = [1, float('nan'), 3], y = [float('nan'), 'b', 'c'], z = range(3)}
+        >>> tl.drop_nans()
+        >>> tl.drop_nans('x', 'y')
+        """
+        if len(args) == 1 and args[0] is None:
+            subset = None
+        else:
+            subset = _as_list(args)
+            if not subset:
+                subset = None
+        return super().drop_nans(subset=subset).pipe(_from_polars_lazy)
+
+    def drop_nulls(self, *args):
         """
         Drop rows containing missing values
 
@@ -377,15 +401,16 @@ class TibbleLazy(pl.LazyFrame):
         Examples
         --------
         >>> tl = tp.TibbleLazy(x = [1, None, 3], y = [None, 'b', 'c'], z = range(3)}
-        >>> tl.drop_null()
-        >>> tl.drop_null('x', 'y')
+        >>> tl.drop_nulls()
+        >>> tl.drop_nulls('x', 'y')
         """
-        args = _as_list(args)
-        if len(args) == 0:
-            out = super().drop_nulls()
+        if len(args) == 1 and args[0] is None:
+            subset = None
         else:
-            out = super().drop_nulls(args)
-        return out.pipe(_from_polars_lazy)
+            subset = _as_list(args)
+            if not subset:
+                subset = None
+        return super().drop_nulls(subset=subset).pipe(_from_polars_lazy)
 
     def equals(self, other, null_equal=True):
         """
@@ -1176,6 +1201,51 @@ class TibbleLazy(pl.LazyFrame):
         replace_exprs = [col(key).fill_null(value) for key, value in replace.items()]
         return self.mutate(*replace_exprs)
 
+    def row_index(self, name: str = "index", offset: int = 0):
+        """
+        A wrapper of `polars.DataFrame.with_row_index()`
+
+        Add a row index as the first column in the DataFrame.
+
+        Parameters
+        ----------
+        name
+            Name of the index column.
+        offset
+            Start the index at this offset. Cannot be negative.
+
+        Warnings
+        --------
+        Using this function can have a negative effect on query performance.
+        This may, for instance, block predicate pushdown optimization.
+
+        Notes
+        -----
+        The resulting column does not have any special properties. It is a regular
+        column of type `UInt32` (or `UInt64` in `polars[rt64]`).
+
+        Examples
+        --------
+        >>> tl = tp.TibbleLazy(
+        ...     {
+        ...         "a": [1, 3, 5],
+        ...         "b": [2, 4, 6],
+        ...     }
+        ... )
+        >>> tl.row_index().collect()
+        shape: (3, 3)
+        ┌───────┬─────┬─────┐
+        │ index ┆ a   ┆ b   │
+        │ ---   ┆ --- ┆ --- │
+        │ u32   ┆ i64 ┆ i64 │
+        ╞═══════╪═════╪═════╡
+        │ 0     ┆ 1   ┆ 2   │
+        │ 1     ┆ 3   ┆ 4   │
+        │ 2     ┆ 5   ┆ 6   │
+        └───────┴─────┴─────┘
+        """
+        return super().with_row_index(name, offset).pipe(_from_polars_lazy)
+
     def separate(self, sep_col, into, sep="_", remove=True):
         """
         Separate a character column into multiple columns
@@ -1427,51 +1497,6 @@ class TibbleLazy(pl.LazyFrame):
             out = out.drop(unite_cols)
         return out
 
-    def row_index(self, name: str = "index", offset: int = 0):
-        """
-        A wrapper of `polars.DataFrame.with_row_index()`
-
-        Add a row index as the first column in the DataFrame.
-
-        Parameters
-        ----------
-        name
-            Name of the index column.
-        offset
-            Start the index at this offset. Cannot be negative.
-
-        Warnings
-        --------
-        Using this function can have a negative effect on query performance.
-        This may, for instance, block predicate pushdown optimization.
-
-        Notes
-        -----
-        The resulting column does not have any special properties. It is a regular
-        column of type `UInt32` (or `UInt64` in `polars[rt64]`).
-
-        Examples
-        --------
-        >>> tl = tp.TibbleLazy(
-        ...     {
-        ...         "a": [1, 3, 5],
-        ...         "b": [2, 4, 6],
-        ...     }
-        ... )
-        >>> tl.row_index().collect()
-        shape: (3, 3)
-        ┌───────┬─────┬─────┐
-        │ index ┆ a   ┆ b   │
-        │ ---   ┆ --- ┆ --- │
-        │ u32   ┆ i64 ┆ i64 │
-        ╞═══════╪═════╪═════╡
-        │ 0     ┆ 1   ┆ 2   │
-        │ 1     ┆ 3   ┆ 4   │
-        │ 2     ┆ 5   ┆ 6   │
-        └───────┴─────┴─────┘
-        """
-        return super().with_row_index(name, offset).pipe(_from_polars_lazy)
-
     @property
     def colnames(self):
         """
@@ -1538,7 +1563,6 @@ _allowed_methods = ["dtypes", "frame_equal", "get_columns", "lazy", "pipe"]
 _polars_methods = [
     "apply",
     "downsample",
-    "drop_duplicates",
     "explode",
     "find_idx_by_name",
     "fold",
@@ -1574,7 +1598,6 @@ _polars_methods = [
     # 'to_arrow',
     # 'to_dict',
     "to_dicts",
-    "to_dummies",
     "to_ipc",
     "to_json",
     "to_numpy",

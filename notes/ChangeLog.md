@@ -1,3 +1,8 @@
+# 0.18.0
++ Change `drop_null` -> `drop_nulls` and enhance its behaviour
++ Add `drop_nans`
++ Add `to_dummies` for `TibbleFrame` (TibbleLazy not supported)
+
 # 0.17.1
 + Enhance behaviours of `map_groups`
 
