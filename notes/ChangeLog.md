@@ -1,3 +1,6 @@
+# 0.18.1
++ Fix behaviour of `describe`
+
 # 0.18.0
 + Change `drop_null` -> `drop_nulls` and enhance its behaviour
 + Add `drop_nans`

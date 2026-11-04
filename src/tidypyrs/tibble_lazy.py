@@ -326,7 +326,7 @@ class TibbleLazy(pl.LazyFrame):
         >>> tl.describe()
         """
         from .tibble_frame import _from_polars_frame
-        return super().describe(percentiles, interpolation=interpolation).pipe(_from_polars_frame)
+        return self.as_polars().describe(percentiles, interpolation=interpolation).pipe(_from_polars_frame)
 
     def distinct(self, *args):
         """

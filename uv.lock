@@ -2808,7 +2808,7 @@ wheels = [
 
 [[package]]
 name = "tidypyrs"
-version = "0.18.0"
+version = "0.18.1"
 source = { editable = "." }
 dependencies = [
     { name = "polars" },

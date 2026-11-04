@@ -353,7 +353,7 @@ class TibbleFrame(pl.DataFrame):
         --------
         >>> tf.describe()
         """
-        return super().describe(percentiles, interpolation=interpolation).pipe(_from_polars_frame)
+        return self.as_polars().describe(percentiles, interpolation=interpolation).pipe(_from_polars_frame)
 
     def distinct(self, *args):
         """
