@@ -93,6 +93,7 @@ class TibbleFrame(pl.DataFrame):
             "colnames",
             "clone",
             "count",
+            "crosstab",
             "describe",
             "distinct",
             "drop",
@@ -326,6 +327,73 @@ class TibbleFrame(pl.DataFrame):
             out = out.arrange(desc(name))
 
         return out
+
+    def crosstab(self, index, columns, column_levels=None, *, margins=False, margins_name="All", normalize=False):
+        """
+        Compute a frequency cross-tabulation.
+
+        Parameters
+        ----------
+        index : str or sequence of str
+            Columns identifying the output rows.
+        columns : str or sequence of str
+            Columns whose categories become output columns. Multiple columns
+            are cast to String and combined with "_" in the supplied order.
+            Combinations containing null values are excluded.
+        column_levels : iterable, optional
+            Categories to include, in output-column order. If omitted,
+            non-null categories are discovered and sorted.
+            For multiple column variables, provide combined string labels
+            such as "Fire_true". Categories outside the supplied levels
+            are excluded from counts, margins, and normalization.
+        margins : bool, default False
+            Add a total row and total column.
+        margins_name : str, default "All"
+            Name of the total column and label used in every row-key column
+            of the total row. Row keys are cast to String when margins=True.
+            Choose a label distinct from actual row-key values.
+        normalize : {False, True, "all", "index", "columns"}, default False
+            False returns counts; True or "all" divides by the grand total;
+            "index" divides by row totals; "columns" divides by column totals.
+            Zero denominators produce zero.
+
+        Returns
+        -------
+        TibbleFrame
+            Cross-tabulation with row keys first, category columns next,
+            and the optional total column last.
+
+        Notes
+        -----
+        Null row keys are retained. Missing category combinations receive zero.
+        Normalization denominators exclude margins.
+
+        Multiple column variables use concatenated labels, not a MultiIndex;
+        values containing "_" may produce ambiguous combinations.
+
+        Row ordering is unspecified. Use arrange() when needed.
+
+        Examples
+        --------
+        >>> tf.crosstab("type_1", "legendary")
+        >>> tf.crosstab("type_1", ["type_2", "legendary"])
+        >>> tf.crosstab("type_1", "legendary", margins=True, normalize="index")
+        >>> tf.crosstab("type_1", "legendary", column_levels=[False, True])
+        """
+        from .tibble_lazy import _from_polars_lazy
+
+        return (
+            _from_polars_lazy(self.as_polars().lazy())
+            .crosstab(
+                index=index,
+                columns=columns,
+                column_levels=column_levels,
+                margins=margins,
+                margins_name=margins_name,
+                normalize=normalize,
+            )
+            .collect()
+        )
 
     def describe(
         self,
