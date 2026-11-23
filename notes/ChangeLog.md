@@ -1,3 +1,8 @@
+# 0.19.0
++ Add `tp.concat_arr` and `tp.concat_str`
++ Implement `crosstab` for TibbleLazy and TibbleFrame
++ Fix `read_excel` overload
+
 # 0.18.1
 + Fix behaviour of `describe`
 

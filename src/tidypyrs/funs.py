@@ -1,5 +1,6 @@
 import copy
-from typing import overload
+from collections.abc import Sequence
+from typing import Any, Literal, overload
 
 import polars as pl
 
@@ -41,6 +42,7 @@ __all__ = [  # noqa: RUF022
     "cor",
     "cov",
     "count",
+    "crosstab",
     "first",
     "last",
     "len",
@@ -1072,19 +1074,62 @@ def read_csv(source, **kwargs) -> TibbleFrame:
     return pl.read_csv(source, **kwargs).pipe(from_polars)
 
 
-def read_excel(source, **kwargs):
+@overload
+def read_excel(source: Any, *, sheet_id: None = None, sheet_name: str | None = None, **kwargs: Any) -> TibbleFrame: ...
+
+@overload
+def read_excel(source: Any, *, sheet_id: Literal[0], sheet_name: None = None, **kwargs: Any, ) -> dict[str, TibbleFrame]: ...
+
+@overload
+def read_excel(source: Any, *, sheet_id: Sequence[int], sheet_name: None = None, **kwargs: Any, ) -> dict[str, TibbleFrame]: ...
+
+@overload
+def read_excel(source: Any, *, sheet_id: None = None, sheet_name: list[str] | tuple[str, ...], **kwargs: Any, ) -> dict[str, TibbleFrame]: ...
+
+@overload
+def read_excel(source: Any, *, sheet_id: int | Sequence[int] | None = None, sheet_name: str | list[str] | tuple[str, ...] | None = None, **kwargs: Any, ) -> TibbleFrame | dict[str, TibbleFrame]: ...
+
+def read_excel(
+    source: Any,
+    *,
+    sheet_id: int | Sequence[int] | None = None,
+    sheet_name: str | list[str] | tuple[str, ...] | None = None,
+    **kwargs: Any,
+) -> TibbleFrame | dict[str, TibbleFrame]:
     """
-    Read Excel data into a TibbleFrame or a dictionary of TibbleFrames.
+    Read Excel data into a TibbleFrame or dictionary of TibbleFrames.
+
+    By default, read the first sheet into a TibbleFrame. A single sheet
+    name also returns a TibbleFrame. Sheet sequences or sheet_id=0
+    return a dictionary keyed by sheet name.
+
+    Additional keyword arguments are forwarded to polars.read_excel.
     """
-    result = pl.read_excel(source, **kwargs)
+    from .tibble_frame import _from_polars_frame
+
+    if sheet_id is not None and sheet_name is not None:
+        raise ValueError(
+            "Specify either `sheet_id` or `sheet_name`, not both."
+        )
+
+    if isinstance(sheet_name, str):
+        result = pl.read_excel(source, sheet_name=sheet_name, **kwargs)
+    elif sheet_name is not None:
+        result = pl.read_excel(source, sheet_name=list(sheet_name), **kwargs)
+    elif isinstance(sheet_id, int):
+        result = pl.read_excel(source, sheet_id=sheet_id, **kwargs)
+    elif sheet_id is not None:
+        result = pl.read_excel(source, sheet_id=list(sheet_id), **kwargs)
+    else:
+        result = pl.read_excel(source, **kwargs)
 
     if isinstance(result, dict):
         return {
-            sheet_name: from_polars(frame)
-            for sheet_name, frame in result.items()
+            name: _from_polars_frame(frame)
+            for name, frame in result.items()
         }
 
-    return from_polars(result)
+    return _from_polars_frame(result)
 
 
 def read_parquet(source, **kwargs) -> TibbleFrame:

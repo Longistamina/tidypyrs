@@ -91,6 +91,7 @@ class TibbleLazy(pl.LazyFrame):
             "collect",
             "clone",
             "count",
+            "crosstab",
             "describe",
             "distinct",
             "drop",
@@ -293,6 +294,203 @@ class TibbleLazy(pl.LazyFrame):
             out = out.arrange(desc(name))
 
         return out
+
+    def crosstab(self, index, columns, column_levels=None, *, margins=False, margins_name="All", normalize=False):
+        """
+        Compute a frequency cross-tabulation.
+
+        Parameters
+        ----------
+        index : str or sequence of str
+            Columns identifying the output rows.
+        columns : str or sequence of str
+            Columns whose categories become output columns. Multiple columns
+            are cast to String and combined with "_" in the supplied order.
+            Combinations containing null values are excluded.
+        column_levels : iterable, optional
+            Categories to include, in output-column order. For multiple column
+            variables, provide combined string labels such as "Fire_true".
+            If omitted, non-null categories are discovered and sorted.
+            Supplied categories must have unique string representations.
+            Categories outside these levels are excluded from all calculations.
+        margins : bool, default False
+            Add a total row and total column. Totals are calculated from raw
+            counts before normalization.
+        margins_name : str, default "All"
+            Name of the total column and label used in every row-key column
+            of the total row. Row keys are cast to String when margins=True.
+            Choose a label distinct from actual row-key values.
+        normalize : {False, True, "all", "index", "columns"}, default False
+            False returns counts; True or "all" divides by the grand total;
+            "index" divides by row totals; "columns" divides by column totals.
+            Zero denominators produce zero.
+
+        Returns
+        -------
+        TibbleLazy
+            Cross-tabulation with row keys first, category columns next, and
+            the optional total column last. Row ordering is unspecified.
+
+        Notes
+        -----
+        Omitting column_levels executes a category-discovery query immediately.
+        The returned table remains lazy, but collecting it may read the source
+        again. Supplying column_levels avoids this discovery query.
+
+        Null row keys are retained. Missing category combinations receive zero.
+        Multiple column variables use concatenated labels, not a MultiIndex;
+        values containing "_" may produce ambiguous combinations.
+
+        Normalization denominators exclude margins. With normalized margins,
+        the total row contains overall category proportions for "index",
+        column-total indicators for "columns", and overall proportions for
+        "all". The total column contains row-total indicators for "index"
+        and overall row proportions for "columns" or "all".
+
+        Examples
+        --------
+        >>> tl.crosstab("type_1", "legendary").collect()
+        >>> tl.crosstab("type_1", ["type_2", "legendary"]).collect()
+        >>> tl.crosstab("type_1", "legendary", margins=True, normalize="index").collect()
+        >>> tl.crosstab("type_1", "legendary", column_levels=[False, True]).collect()
+        """
+        if normalize is False:
+            mode = None
+        elif normalize is True:
+            mode = "all"
+        elif isinstance(normalize, str) and normalize in ("all", "index", "columns"):
+            mode = normalize
+        else:
+            raise ValueError("`normalize` must be False, True, 'all', 'index', or 'columns'.")
+
+        keys = [index] if isinstance(index, str) else list(index)
+        column_keys = [columns] if isinstance(columns, str) else list(columns)
+
+        for parameter, values in (("index", keys), ("columns", column_keys)):
+            if not values or any(not isinstance(value, str) for value in values):
+                raise ValueError(f"`{parameter}` must contain column names.")
+            if len(set(values)) != len(values):
+                raise ValueError(f"`{parameter}` must contain unique column names.")
+
+        if set(keys).intersection(column_keys):
+            raise ValueError("`index` and `columns` must not overlap.")
+
+        frame = self.as_polars()
+
+        if len(column_keys) == 1:
+            category_column = column_keys[0]
+        else:
+            existing_names = set(frame.collect_schema().names())
+            category_column = "__tidypyrs_crosstab_columns"
+            while category_column in existing_names:
+                category_column += "_"
+
+            frame = frame.with_columns(
+                pl.concat_str(
+                    [pl.col(name).cast(pl.String) for name in column_keys],
+                    separator="_",
+                    ignore_nulls=False,
+                ).alias(category_column)
+            )
+
+        if column_levels is None:
+            levels = (
+                frame.select(category_column)
+                .unique()
+                .drop_nulls()
+                .sort(category_column)
+                .collect()
+                .to_series()
+                .to_list()
+            )
+        else:
+            if isinstance(column_levels, (str, bytes)):
+                raise TypeError("`column_levels` must be an iterable, not a string.")
+            levels = list(column_levels)
+
+        if not levels or any(value is None for value in levels):
+            raise ValueError("Category levels must be nonempty and contain no nulls.")
+
+        names = [str(value) for value in levels]
+        if len(set(names)) != len(names):
+            raise ValueError("Category levels must have unique string representations.")
+        if set(keys).intersection(names):
+            raise ValueError("Category labels conflict with row-key column names.")
+
+        if margins:
+            if not isinstance(margins_name, str):
+                raise TypeError("`margins_name` must be a string.")
+            if margins_name in keys or margins_name in names:
+                raise ValueError("`margins_name` conflicts with an output column.")
+
+        table = (
+            frame.filter(pl.col(category_column).is_in(levels))
+            .group_by(keys)
+            .agg([
+                (pl.col(category_column) == pl.lit(level))
+                .fill_null(False)
+                .cast(pl.UInt64)
+                .sum()
+                .alias(name)
+                for level, name in zip(levels, names)
+            ])
+        )
+
+        def divide(numerator, denominator):
+            return pl.when(denominator != 0).then(numerator / denominator).otherwise(0.0)
+
+        row_total = pl.sum_horizontal([pl.col(name) for name in names])
+        grand_total = row_total.sum()
+
+        if margins:
+            total_exprs = []
+            for name in names:
+                column_total = pl.col(name).sum()
+                if mode in ("all", "index"):
+                    value = divide(column_total, grand_total)
+                elif mode == "columns":
+                    value = divide(column_total, column_total)
+                else:
+                    value = column_total
+                total_exprs.append(value.alias(name))
+
+            corner = divide(grand_total, grand_total) if mode else grand_total
+            totals = table.select(
+                [pl.lit(margins_name).alias(key) for key in keys]
+                + total_exprs
+                + [corner.alias(margins_name)]
+            )
+
+        body_exprs = []
+        for name in names:
+            value = pl.col(name)
+            if mode == "index":
+                value = divide(value, row_total)
+            elif mode == "columns":
+                value = divide(value, pl.col(name).sum())
+            elif mode == "all":
+                value = divide(value, grand_total)
+            body_exprs.append(value.alias(name))
+
+        if margins:
+            if mode == "index":
+                total = divide(row_total, row_total)
+            elif mode in ("all", "columns"):
+                total = divide(row_total, grand_total)
+            else:
+                total = row_total
+            body_exprs.append(total.alias(margins_name))
+
+        result = table.select(
+            [pl.col(key).cast(pl.String) if margins else pl.col(key) for key in keys]
+            + body_exprs
+        )
+
+        if margins:
+            result = pl.concat([result, totals], how="vertical_relaxed")
+
+        return _from_polars_lazy(result)
+
 
     def describe(
         self,

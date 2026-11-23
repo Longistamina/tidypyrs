@@ -13,7 +13,9 @@ __all__ = [  # noqa: RUF022
     # Experessions
     "all",
     "col",
+    "concat_arr",
     "concat_list",
+    "concat_str",
     "element",
     "exclude",
     "lit",
@@ -73,7 +75,9 @@ __all__ = [  # noqa: RUF022
 # Expressions
 all = pl.all
 col = pl.col
+concat_arr = pl.concat_arr
 concat_list = pl.concat_list
+concat_str = pl.concat_str
 element = pl.element
 exclude = pl.exclude
 lit = pl.lit
