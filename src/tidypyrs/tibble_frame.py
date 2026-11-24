@@ -137,6 +137,7 @@ class TibbleFrame(pl.DataFrame):
             "to_dummies",
             "transpose",
             "unite",
+            "unnest",
             "write_csv",
             "write_parquet",
         ]
@@ -1671,7 +1672,29 @@ class TibbleFrame(pl.DataFrame):
             out = out.drop(unite_cols)
         return out
 
+    def unnest(self, columns, *more_columns) -> "TibbleFrame":
+        """
+        Expand Struct columns into their individual fields.
 
+        Parameters
+        ----------
+        columns : str or sequence of str
+            Struct columns to expand.
+        *more_columns : str
+            Additional Struct columns to expand.
+
+        Returns
+        -------
+        TibbleFrame
+            Frame with each Struct replaced by its fields.
+
+        Examples
+        --------
+        >>> tf.unnest("parts")
+        >>> tf.unnest("parts", "details")
+        """
+        out = self.as_polars().unnest(columns, *more_columns)
+        return _from_polars_frame(out)
 
     def write_csv(self, file=None, has_headers=True, sep=","):
         """Write a data frame to a csv"""
@@ -1828,7 +1851,6 @@ _polars_methods = [
     "to_numpy",
     "to_pandas",
     "to_parquet",
-    "unnest",
     "unpivot",
     "var",
     "with_row_index"
