@@ -6,6 +6,7 @@ from operator import and_, not_
 from typing import cast
 
 import polars as pl
+from typing_extensions import Sequence
 
 from .groupby import TibbleLazyGroupBy
 from .reexports import *
@@ -130,7 +131,8 @@ class TibbleLazy(pl.LazyFrame):
             "summarise",
             "summarize",
             "tail",
-            "unite"
+            "unite",
+            "unnest"
         ]
         return _TibbleLazy_methods
 
@@ -1157,7 +1159,7 @@ class TibbleLazy(pl.LazyFrame):
         self,
         names_from="name",
         names_list=None,
-        values_from="value",
+        values_from: str | Sequence[str] = "value",
         id_cols=None,
         values_fn="first",
         values_fill=None,
@@ -1695,6 +1697,30 @@ class TibbleLazy(pl.LazyFrame):
             out = out.drop(unite_cols)
         return out
 
+    def unnest(self, columns, *more_columns) -> "TibbleLazy":
+        """
+        Expand Struct columns into their individual fields.
+
+        Parameters
+        ----------
+        columns : str or sequence of str
+            Struct columns to expand.
+        *more_columns : str
+            Additional Struct columns to expand.
+
+        Returns
+        -------
+        TibbleLazy
+            Frame with each Struct replaced by its fields.
+
+        Examples
+        --------
+        >>> tl.unnest("parts")
+        >>> tl.unnest("parts", "details")
+        """
+        out = self.as_polars().unnest(columns, *more_columns)
+        return _from_polars_lazy(out)
+
     @property
     def colnames(self):
         """
@@ -1801,7 +1827,6 @@ _polars_methods = [
     "to_numpy",
     "to_pandas",
     "to_parquet",
-    "unnest",
     "unpivot",
     "var",
     "with_row_index"

@@ -1,3 +1,6 @@
+# 0.20.0
++ Add `unnest` for both Frames
+
 # 0.19.0
 + Add `tp.concat_arr` and `tp.concat_str`
 + Implement `crosstab` for TibbleLazy and TibbleFrame
